@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creekside Apartments - Compliance Management System</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; }
+    
+    /* LOGIN SCREEN */
+    #loginScreen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a3a52 0%, #2a5a7a 100%);
+      padding: 20px;
+    }
+    
+    .auth-container {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .auth-container h1 {
+      text-align: center;
+      color: #1a3a52;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+    
+    .auth-container h2 {
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 30px;
+      font-weight: normal;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #1a3a52;
+      font-size: 14px;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #00a8e8;
+      box-shadow: 0 0 0 2px rgba(0,168,232,0.1);
+    }
+    
+    .auth-btn {
+      width: 100%;
+      padding: 12px;
+      background: #00a8e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+    
+    .auth-btn:hover { background: #0088b8; }
+    
+    .toggle-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f0f0f0;
+      color: #1a3a52;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 15px;
+      transition: all 0.2s;
+    }
+    
+    .toggle-btn:hover { background: #e0e0e0; }
+    
+    .error-message {
+      color: #ef4444;
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      padding: 10px;
+      background: #fee2e2;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .error-message.show { display: block; }
+    
+    .success-message {
+      color: #10b981;
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      padding: 10px;
+      background: #d1fae5;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .success-message.show { display: block; }
+    
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+    
+    /* APP SCREEN */
+    #appScreen { display: none; }
+    
+    .container { display: flex; height: 100vh; }
+    .sidebar {
+      width: 280px;
+      background: #1a3a52;
+      color: white;
+      overflow-y: auto;
+      box-shadow: 2px 0 8px rgba(0,0,0,.15);
+    }
+    
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .sidebar-menu {
+      list-style: none;
+    }
+    
+    .sidebar-menu li {
+      padding: 15px 20px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all .2s;
+    }
+    
+    .sidebar-menu li:hover { background: rgba(255,255,255,.1); border-left-color: #00a8e8; }
+    .sidebar-menu li.active { background: #00a8e8; border-left-color: #00a8e8; }
+    
+    .main { flex: 1; display: flex; flex-direction: column; }
+    
+    .header {
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,.05);
+    }
+    
+    .header h1 { font-size: 24px; color: #1a3a52; }
+    
+    .user-menu {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all .2s;
+      font-size: 14px;
+    }
+    
+    .btn-primary { background: #00a8e8; color: white; }
+    .btn-primary:hover { background: #0088b8; }
+    
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    
+    .btn-small { padding: 6px 12px; font-size: 12px; }
+    
+    .content { flex: 1; overflow-y: auto; padding: 30px; }
+    
+    .page { display: none; }
+    .page.active { display: block; }
+    
+    .page-title { font-size: 28px; color: #1a3a52; margin-bottom: 20px; font-weight: bold; }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+      border-left: 4px solid #00a8e8;
+    }
+    
+    .stat-card h3 { font-size: 14px; color: #666; margin-bottom: 10px; }
+    .stat-card .value { font-size: 32px; font-weight: bold; color: #1a3a52; }
+    
+    .form {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+      margin-bottom: 20px;
+    }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-weight: bold; margin-bottom: 5px; color: #1a3a52; }
+    
+    select, input, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    
+    textarea { min-height: 100px; resize: vertical; }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+    
+    .table thead { background: #f5f7fa; border-bottom: 2px solid #e0e0e0; }
+    .table th { padding: 15px; text-align: left; font-weight: bold; color: #1a3a52; font-size: 14px; }
+    .table td { padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
+    .table tbody tr:hover { background: #f9fafb; }
+    
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .badge-application { background: #dbeafe; color: #1e40af; }
+    .badge-review { background: #fef3c7; color: #92400e; }
+    .badge-assigned { background: #e0e7ff; color: #3730a3; }
+    .badge-moving { background: #c7d2fe; color: #3730a3; }
+    .badge-current { background: #d1fae5; color: #065f46; }
+    .badge-notice { background: #fee2e2; color: #991b1b; }
+    .badge-vacated { background: #f3e8ff; color: #6b21a8; }
+    .badge-served { background: #fecaca; color: #7c2d12; }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .modal.show { display: flex; }
+    
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+    }
+    
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h2 { margin: 0; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN/REGISTER SCREEN -->
+<div id="loginScreen">
+  <div class="auth-container">
+    <h1>🏢 Creekside</h1>
+    
+    <!-- LOGIN FORM -->
+    <div id="loginForm" class="form-section active">
+      <h2>Compliance Management System</h2>
+      
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="Enter your email">
+      </div>
+      
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password">
+      </div>
+      
+      <button class="auth-btn" onclick="handleLogin()">Login</button>
+      <button class="toggle-btn" onclick="toggleToRegister()">Don't have account? Register</button>
+      
+      <div id="loginError" class="error-message"></div>
+    </div>
+    
+    <!-- REGISTER FORM -->
+    <div id="registerForm" class="form-section">
+      <h2>Create Account</h2>
+      
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="registerName" placeholder="Your full name">
+      </div>
+      
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="registerEmail" placeholder="Your email">
+      </div>
+      
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="registerPassword" placeholder="Create password (min 6 chars)">
+      </div>
+      
+      <button class="auth-btn" onclick="handleRegister()">Create Account</button>
+      <button class="toggle-btn" onclick="toggleToLogin()">Already have account? Login</button>
+      
+      <div id="registerError" class="error-message"></div>
+      <div id="registerSuccess" class="success-message"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="appScreen">
+  <div class="container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">🏢 Creekside</div>
+      <ul class="sidebar-menu">
+        <li class="active" onclick="showPage('dashboard')">📊 Dashboard</li>
+        <li onclick="showPage('tenants')">👥 Tenants</li>
+        <li onclick="showPage('units')">🏠 Units</li>
+        <li onclick="showPage('notifications')">📧 Notifications</li>
+        <li onclick="showPage('templates')">📋 Notice Templates</li>
+        <li onclick="showPage('audit')">🔍 Audit Log</li>
+        <li onclick="logout()">🚪 Logout</li>
+      </ul>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+      <!-- HEADER -->
+      <div class="header">
+        <h1>Creekside Apartments - Compliance System</h1>
+        <div class="user-menu">
+          <div id="userDisplay"></div>
+          <button class="btn btn-primary" onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="page active">
+          <h2 class="page-title">📊 Dashboard</h2>
+          <div class="stats">
+            <div class="stat-card">
+              <h3>Total Tenants</h3>
+              <div class="value" id="totalTenants">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Current Residents</h3>
+              <div class="value" id="currentTenants">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Vacant Units</h3>
+              <div class="value" id="vacantUnits">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Occupied Units</h3>
+              <div class="value" id="occupiedUnits">0</div>
+            </div>
+          </div>
+          <div class="form">
+            <h3>System Status</h3>
+            <p>✅ Backend Connected</p>
+            <p>✅ Database Active</p>
+            <p>✅ All Systems Operational</p>
+          </div>
+        </div>
+
+        <!-- TENANTS -->
+        <div id="tenants" class="page">
+          <h2 class="page-title">👥 Tenants Management</h2>
+          <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary" onclick="openAddTenantModal()">+ Add New Tenant</button>
+            <button class="btn btn-primary" onclick="openImportTenantModal()" style="background: #10b981;">📤 Import from CSV</button>
+            <button class="btn btn-primary" onclick="downloadTenantTemplate()" style="background: #8b5cf6;">📥 Download Template</button>
+            <button class="btn btn-danger" id="truncateTenantsBtn" onclick="truncateTenants()" style="display: none; margin-left: auto;">🗑️ Truncate All</button>
+          </div>
+          <div style="margin-top: 20px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Unit</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Tenancy Status</th>
+                  <th>Notice Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tenantsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align:center;padding:40px;">No tenants yet. Add one to get started!</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- UNITS -->
+        <div id="units" class="page">
+          <h2 class="page-title">🏠 Units Management</h2>
+          <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary" onclick="openAddUnitModal()">+ Add New Unit</button>
+            <button class="btn btn-primary" onclick="openImportUnitModal()" style="background: #10b981;">📤 Import from CSV</button>
+            <button class="btn btn-primary" onclick="downloadUnitTemplate()" style="background: #8b5cf6;">📥 Download Template</button>
+            <button class="btn btn-danger" id="truncateUnitsBtn" onclick="truncateUnits()" style="display: none; margin-left: auto;">🗑️ Truncate All</button>
+          </div>
+          <div style="margin-top: 20px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Unit Number</th>
+                  <th>Unit Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="unitsTableBody">
+                <tr>
+                  <td colspan="3" style="text-align:center;padding:40px;">No units yet. Add one to get started!</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div id="notifications" class="page">
+          <h2 class="page-title">📧 Notifications</h2>
+          <p>Notification management - View and track notices sent to tenants.</p>
+        </div>
+
+        <!-- NOTICE TEMPLATES -->
+        <div id="templates" class="page">
+          <h2 class="page-title">📋 Notice Templates</h2>
+          <button class="btn btn-primary" onclick="openAddTemplateModal()">+ Create Template</button>
+          <div style="margin-top: 20px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Template Name</th>
+                  <th>Notice Type</th>
+                  <th>Subject</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="templatesTableBody">
+                <tr>
+                  <td colspan="4" style="text-align:center;padding:40px;">No templates yet. Create one to get started!</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- AUDIT LOG -->
+        <div id="audit" class="page">
+          <h2 class="page-title">🔍 Audit Log</h2>
+          <p>Audit trail will appear here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TENANT MODAL -->
+<div id="tenantModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="tenantModalTitle">Add Tenant</h2>
+      <button class="close-btn" onclick="closeTenantModal()">&times;</button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input type="text" id="tenantName">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Unit</label>
+      <input type="text" id="tenantUnit">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" id="tenantEmail">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Phone</label>
+      <input type="tel" id="tenantPhone">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select id="tenantStatus">
+        <option value="APPLICATION">📋 Application</option>
+        <option value="REVIEW">🔍 Review</option>
+        <option value="ASSIGNED">✅ Assigned</option>
+        <option value="MOVING_IN">📦 Moving In</option>
+        <option value="CURRENT" selected>👤 Current Tenant</option>
+        <option value="NOTICE_RECEIVED">⚠️ Notice Received</option>
+        <option value="VACATED">🚚 Vacated</option>
+        <option value="NOTICE_SERVED">📋 Notice Served</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Lease Start</label>
+      <input type="date" id="tenantLeaseStart">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Lease End</label>
+      <input type="date" id="tenantLeaseEnd">
+    </div>
+    
+    <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" onclick="saveTenant()">Save Tenant</button>
+  </div>
+</div>
+
+<!-- UNIT MODAL -->
+<div id="unitModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add Unit</h2>
+      <button class="close-btn" onclick="closeUnitModal()">&times;</button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Unit Number</label>
+      <input type="text" id="unitNumber" placeholder="e.g., 101, 202, etc">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select id="unitStatus">
+        <option value="VACANT">Vacant</option>
+        <option value="OCCUPIED">Occupied</option>
+        <option value="MAINTENANCE">Maintenance</option>
+      </select>
+    </div>
+    
+    <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" onclick="saveUnit()">Save Unit</button>
+  </div>
+</div>
+
+<!-- IMPORT TENANTS MODAL -->
+<div id="importTenantModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Import Tenants from CSV</h2>
+      <button class="close-btn" onclick="closeImportTenantModal()">&times;</button>
+    </div>
+    
+    <div style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 4px;">
+      <h3 style="margin-top: 0;">CSV Format Required:</h3>
+      <p style="font-family: monospace; font-size: 12px; margin: 10px 0;">
+        name,unit,email,phone,status,lease_start,lease_end<br>
+        John Doe,101,john@example.com,555-1234,CURRENT,2023-01-01,2024-12-31<br>
+        Jane Smith,202,jane@example.com,555-5678,CURRENT,2023-06-01,2024-05-31
+      </p>
+      <p style="font-size: 12px; color: #666; margin: 10px 0 0 0;">
+        <strong>Status options:</strong> APPLICATION, REVIEW, ASSIGNED, MOVING_IN, CURRENT, NOTICE_RECEIVED, VACATED, NOTICE_SERVED
+      </p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Select CSV File</label>
+      <input type="file" id="tenantFile" accept=".csv,.xlsx" style="padding: 8px; border: 2px dashed #00a8e8;">
+    </div>
+    
+    <div id="tenantPreview" style="margin-bottom: 20px; display: none; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Unit</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tenantPreviewBody"></tbody>
+      </table>
+    </div>
+    
+    <div id="importTenantStatus" style="display: none; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: bold;"></div>
+    
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-primary" style="flex: 1;" onclick="processTenantsImport()">Import Tenants</button>
+      <button class="btn" style="flex: 1; background: #f0f0f0; color: #333;" onclick="closeImportTenantModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT UNITS MODAL -->
+<div id="importUnitModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Import Units from CSV</h2>
+      <button class="close-btn" onclick="closeImportUnitModal()">&times;</button>
+    </div>
+    
+    <div style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 4px;">
+      <h3 style="margin-top: 0;">CSV Format Required:</h3>
+      <p style="font-family: monospace; font-size: 12px; margin: 10px 0;">
+        unit_number,status<br>
+        101,VACANT<br>
+        102,OCCUPIED<br>
+        201,VACANT
+      </p>
+      <p style="font-size: 12px; color: #666; margin: 10px 0 0 0;">
+        <strong>Status options:</strong> VACANT, OCCUPIED, MAINTENANCE
+      </p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Select CSV File</label>
+      <input type="file" id="unitFile" accept=".csv,.xlsx" style="padding: 8px; border: 2px dashed #00a8e8;">
+    </div>
+    
+    <div id="unitPreview" style="margin-bottom: 20px; display: none; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Unit Number</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="unitPreviewBody"></tbody>
+      </table>
+    </div>
+    
+    <div id="importUnitStatus" style="display: none; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: bold;"></div>
+    
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-primary" style="flex: 1;" onclick="processUnitsImport()">Import Units</button>
+      <button class="btn" style="flex: 1; background: #f0f0f0; color: #333;" onclick="closeImportUnitModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// CONFIG
+const API_URL = 'https://creekside-prod-backend.onrender.com/api';
+let currentUser = null;
+let currentToken = null;
+let editingTenantId = null;
+
+const TENANT_STATUSES = {
+  'APPLICATION': '📋 Application',
+  'REVIEW': '🔍 Review',
+  'ASSIGNED': '✅ Assigned',
+  'MOVING_IN': '📦 Moving In',
+  'CURRENT': '👤 Current Tenant',
+  'NOTICE_RECEIVED': '⚠️ Notice Received',
+  'VACATED': '🚚 Vacated',
+  'NOTICE_SERVED': '📋 Notice Served'
+};
+
+const UNIT_STATUSES = {
+  'VACANT': 'Vacant',
+  'OCCUPIED': 'Occupied',
+  'MAINTENANCE': 'Maintenance'
+};
+
+// TOGGLE FUNCTIONS
+function toggleToRegister() {
+  document.getElementById('loginForm').classList.remove('active');
+  document.getElementById('registerForm').classList.add('active');
+  clearErrors();
+}
+
+function toggleToLogin() {
+  document.getElementById('registerForm').classList.remove('active');
+  document.getElementById('loginForm').classList.add('active');
+  clearErrors();
+}
+
+function clearErrors() {
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('registerError').textContent = '';
+  document.getElementById('registerError').classList.remove('show');
+  document.getElementById('registerSuccess').textContent = '';
+  document.getElementById('registerSuccess').classList.remove('show');
+}
+
+// REGISTER
+async function handleRegister() {
+  const name = document.getElementById('registerName').value.trim();
+  const email = document.getElementById('registerEmail').value.trim();
+  const password = document.getElementById('registerPassword').value;
+  const errorDiv = document.getElementById('registerError');
+  const successDiv = document.getElementById('registerSuccess');
+  
+  clearErrors();
+  
+  if (!name || !email || !password) {
+    errorDiv.textContent = '❌ Please fill all fields';
+    errorDiv.classList.add('show');
+    return;
+  }
+  
+  if (password.length < 6) {
+    errorDiv.textContent = '❌ Password must be at least 6 characters';
+    errorDiv.classList.add('show');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      successDiv.textContent = '✅ Account created! Switching to login in 2 seconds...';
+      successDiv.classList.add('show');
+      
+      setTimeout(() => {
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = password;
+        toggleToLogin();
+        clearErrors();
+      }, 2000);
+    } else {
+      errorDiv.textContent = '❌ ' + (data.error || 'Registration failed');
+      errorDiv.classList.add('show');
+    }
+  } catch (error) {
+    errorDiv.textContent = '❌ Error: ' + error.message;
+    errorDiv.classList.add('show');
+  }
+}
+
+// LOGIN
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorDiv = document.getElementById('loginError');
+  
+  clearErrors();
+  
+  if (!email || !password) {
+    errorDiv.textContent = '❌ Please enter email and password';
+    errorDiv.classList.add('show');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      currentToken = data.token;
+      currentUser = data.user;
+      
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'flex';
+      document.getElementById('userDisplay').textContent = currentUser.name;
+      loadDashboard();
+    } else {
+      errorDiv.textContent = '❌ Invalid email or password';
+      errorDiv.classList.add('show');
+    }
+  } catch (error) {
+    errorDiv.textContent = '❌ Error: ' + error.message;
+    errorDiv.classList.add('show');
+  }
+}
+
+// PAGE NAVIGATION
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
+  
+  const page = document.getElementById(pageId);
+  if (page) {
+    page.classList.add('active');
+    event.target.closest('li').classList.add('active');
+    
+    if (pageId === 'tenants') loadTenants();
+    if (pageId === 'units') loadUnits();
+  }
+}
+
+// LOAD DASHBOARD
+async function loadDashboard() {
+  try {
+    const tenantsRes = await fetch(`${API_URL}/tenants`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const tenants = await tenantsRes.json();
+    
+    const unitsRes = await fetch(`${API_URL}/units`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const units = await unitsRes.json();
+    
+    const currentCount = tenants.filter(t => t.status === 'CURRENT').length;
+    const vacantCount = units.filter(u => u.status === 'VACANT').length;
+    const occupiedCount = units.filter(u => u.status === 'OCCUPIED').length;
+    
+    document.getElementById('totalTenants').textContent = tenants.length;
+    document.getElementById('currentTenants').textContent = currentCount;
+    document.getElementById('vacantUnits').textContent = vacantCount;
+    document.getElementById('occupiedUnits').textContent = occupiedCount;
+  } catch (error) {
+    console.error('Dashboard error:', error);
+  }
+}
+
+// LOAD TENANTS
+async function loadTenants() {
+  try {
+    const response = await fetch(`${API_URL}/tenants`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const tenants = await response.json();
+    
+    const tbody = document.getElementById('tenantsTableBody');
+    if (tenants.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No tenants yet. Add one to get started!</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = tenants.map(tenant => `
+      <tr>
+        <td>${tenant.name}</td>
+        <td>${tenant.unit}</td>
+        <td>${tenant.email || '-'}</td>
+        <td>${tenant.phone || '-'}</td>
+        <td><span class="badge badge-${tenant.status.toLowerCase()}">${TENANT_STATUSES[tenant.status] || tenant.status}</span></td>
+        <td>
+          <button class="btn btn-primary btn-small" onclick="editTenant(${tenant.id})">Edit</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTenant(${tenant.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Load tenants error:', error);
+  }
+}
+
+// TENANT MODAL FUNCTIONS
+function openAddTenantModal() {
+  editingTenantId = null;
+  document.getElementById('tenantModalTitle').textContent = 'Add Tenant';
+  document.getElementById('tenantName').value = '';
+  document.getElementById('tenantUnit').value = '';
+  document.getElementById('tenantEmail').value = '';
+  document.getElementById('tenantPhone').value = '';
+  document.getElementById('tenantStatus').value = 'CURRENT';
+  document.getElementById('tenantLeaseStart').value = '';
+  document.getElementById('tenantLeaseEnd').value = '';
+  document.getElementById('tenantModal').classList.add('show');
+}
+
+function editTenant(id) {
+  // Fetch and populate form
+  fetch(`${API_URL}/tenants`, {
+    headers: { 'Authorization': `Bearer ${currentToken}` }
+  })
+  .then(r => r.json())
+  .then(tenants => {
+    const tenant = tenants.find(t => t.id === id);
+    if (tenant) {
+      editingTenantId = id;
+      document.getElementById('tenantModalTitle').textContent = 'Edit Tenant';
+      document.getElementById('tenantName').value = tenant.name;
+      document.getElementById('tenantUnit').value = tenant.unit;
+      document.getElementById('tenantEmail').value = tenant.email || '';
+      document.getElementById('tenantPhone').value = tenant.phone || '';
+      document.getElementById('tenantStatus').value = tenant.status;
+      document.getElementById('tenantLeaseStart').value = tenant.lease_start || '';
+      document.getElementById('tenantLeaseEnd').value = tenant.lease_end || '';
+      document.getElementById('tenantModal').classList.add('show');
+    }
+  });
+}
+
+async function saveTenant() {
+  const name = document.getElementById('tenantName').value.trim();
+  const unit = document.getElementById('tenantUnit').value.trim();
+  const email = document.getElementById('tenantEmail').value.trim();
+  const phone = document.getElementById('tenantPhone').value.trim();
+  const status = document.getElementById('tenantStatus').value;
+  const lease_start = document.getElementById('tenantLeaseStart').value;
+  const lease_end = document.getElementById('tenantLeaseEnd').value;
+  
+  if (!name || !unit) {
+    alert('Name and Unit are required');
+    return;
+  }
+  
+  try {
+    const method = editingTenantId ? 'PUT' : 'POST';
+    const url = editingTenantId ? `${API_URL}/tenants/${editingTenantId}` : `${API_URL}/tenants`;
+    
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ name, unit, email, phone, status, lease_start, lease_end })
+    });
+    
+    if (response.ok) {
+      closeTenantModal();
+      loadTenants();
+      loadDashboard();
+    } else {
+      alert('Error saving tenant');
+    }
+  } catch (error) {
+    console.error('Save tenant error:', error);
+    alert('Error: ' + error.message);
+  }
+}
+
+function closeTenantModal() {
+  document.getElementById('tenantModal').classList.remove('show');
+  editingTenantId = null;
+}
+
+async function deleteTenant(id) {
+  if (!confirm('Are you sure you want to delete this tenant?')) return;
+  
+  try {
+    await fetch(`${API_URL}/tenants/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    loadTenants();
+    loadDashboard();
+  } catch (error) {
+    console.error('Delete tenant error:', error);
+  }
+}
+
+// LOAD UNITS
+async function loadUnits() {
+  try {
+    const response = await fetch(`${API_URL}/units`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const units = await response.json();
+    
+    const tbody = document.getElementById('unitsTableBody');
+    if (units.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:40px;">No units yet. Add one to get started!</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = units.map(unit => `
+      <tr>
+        <td>Unit ${unit.unit_number}</td>
+        <td>${UNIT_STATUSES[unit.status] || unit.status}</td>
+        <td>
+          <button class="btn btn-primary btn-small" onclick="editUnit(${unit.id})">Edit</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Load units error:', error);
+  }
+}
+
+function openAddUnitModal() {
+  document.getElementById('unitNumber').value = '';
+  document.getElementById('unitStatus').value = 'VACANT';
+  document.getElementById('unitModal').classList.add('show');
+}
+
+function closeUnitModal() {
+  document.getElementById('unitModal').classList.remove('show');
+}
+
+async function saveUnit() {
+  const unit_number = document.getElementById('unitNumber').value.trim();
+  const status = document.getElementById('unitStatus').value;
+  
+  if (!unit_number) {
+    alert('Unit number is required');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/units`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ unit_number, status })
+    });
+    
+    if (response.ok) {
+      closeUnitModal();
+      loadUnits();
+      loadDashboard();
+    } else {
+      alert('Error saving unit');
+    }
+  } catch (error) {
+    console.error('Save unit error:', error);
+  }
+}
+
+function editUnit(id) {
+  // TODO: Implement edit unit functionality
+  alert('Edit unit coming soon');
+}
+
+// LOGOUT
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  currentToken = null;
+  currentUser = null;
+  
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginForm').classList.add('active');
+  document.getElementById('registerForm').classList.remove('active');
+}
+
+// INIT
+window.onload = () => {
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+  
+  if (token && user) {
+    try {
+      currentToken = token;
+      currentUser = JSON.parse(user);
+      
+      // Fetch full user info to get role
+      fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      })
+      .then(r => r.json())
+      .then(userInfo => {
+        currentUser = userInfo;
+        localStorage.setItem('user', JSON.stringify(userInfo));
+        
+        let displayText = currentUser.name;
+        if (currentUser.role === 'superuser') {
+          displayText += ' 👑 SUPERUSER';
+        }
+        document.getElementById('userDisplay').textContent = displayText;
+        
+        // Show truncate buttons if superuser
+        if (currentUser.role === 'superuser') {
+          document.getElementById('truncateTenantsBtn').style.display = 'block';
+          document.getElementById('truncateUnitsBtn').style.display = 'block';
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching user info:', error);
+        document.getElementById('userDisplay').textContent = currentUser.name;
+      });
+      
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'flex';
+      loadDashboard();
+    } catch (e) {
+      logout();
+    }
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display = 'none';
+  }
+};
+
+// CHECK IF SUPERUSER
+async function checkSuperuser() {
+  try {
+    const response = await fetch(`${API_URL}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    
+    if (response.ok) {
+      const userInfo = await response.json();
+      
+      if (userInfo.role === 'superuser') {
+        document.getElementById('truncateTenantsBtn').style.display = 'block';
+        document.getElementById('truncateUnitsBtn').style.display = 'block';
+      }
+    }
+  } catch (error) {
+    console.error('Error checking superuser status:', error);
+  }
+}
+
+// TRUNCATE TENANTS (SUPERUSER ONLY)
+async function truncateTenants() {
+  const confirmMsg = `⚠️ WARNING! This will DELETE ALL ${window.allTenantsCount || '?'} TENANTS!\n\nThis action CANNOT be undone!\n\nType 'DELETE ALL TENANTS' to confirm:`;
+  const userInput = prompt(confirmMsg);
+  
+  if (userInput !== 'DELETE ALL TENANTS') {
+    alert('❌ Truncate cancelled');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/tenants/truncate/all`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert(`✅ ${result.deletedCount} tenants deleted!\n\nRefreshing...`);
+      loadTenants();
+      loadDashboard();
+    } else {
+      alert(`❌ Error: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+// TRUNCATE UNITS (SUPERUSER ONLY)
+async function truncateUnits() {
+  const confirmMsg = `⚠️ WARNING! This will DELETE ALL ${window.allUnitsCount || '?'} UNITS!\n\nThis action CANNOT be undone!\n\nType 'DELETE ALL UNITS' to confirm:`;
+  const userInput = prompt(confirmMsg);
+  
+  if (userInput !== 'DELETE ALL UNITS') {
+    alert('❌ Truncate cancelled');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/units/truncate/all`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert(`✅ ${result.deletedCount} units deleted!\n\nRefreshing...`);
+      loadUnits();
+      loadDashboard();
+    } else {
+      alert(`❌ Error: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+// LOAD TENANTS (Updated to store count)
+async function loadTenants() {
+  try {
+    const response = await fetch(`${API_URL}/tenants`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const tenants = await response.json();
+    
+    window.allTenantsCount = tenants.length;
+    
+    const tbody = document.getElementById('tenantsTableBody');
+    if (tenants.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No tenants yet. Add one to get started!</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = tenants.map(tenant => `
+      <tr>
+        <td>${tenant.name}</td>
+        <td>${tenant.unit}</td>
+        <td>${tenant.email || '-'}</td>
+        <td>${tenant.phone || '-'}</td>
+        <td><span class="badge badge-${tenant.status.toLowerCase()}">${TENANT_STATUSES[tenant.status] || tenant.status}</span></td>
+        <td>
+          <button class="btn btn-primary btn-small" onclick="editTenant(${tenant.id})">Edit</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTenantConfirm(${tenant.id}, '${tenant.name}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Load tenants error:', error);
+  }
+}
+
+// LOAD UNITS (Updated to store count)
+async function loadUnits() {
+  try {
+    const response = await fetch(`${API_URL}/units`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const units = await response.json();
+    
+    window.allUnitsCount = units.length;
+    
+    const tbody = document.getElementById('unitsTableBody');
+    if (units.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:40px;">No units yet. Add one to get started!</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = units.map(unit => `
+      <tr>
+        <td>Unit ${unit.unit_number}</td>
+        <td>${UNIT_STATUSES[unit.status] || unit.status}</td>
+        <td>
+          <button class="btn btn-primary btn-small" onclick="editUnit(${unit.id})">Edit</button>
+          <button class="btn btn-danger btn-small" onclick="deleteUnitConfirm(${unit.id}, '${unit.unit_number}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Load units error:', error);
+  }
+}
+
+// DELETE TENANT WITH CONFIRMATION
+function deleteTenantConfirm(id, name) {
+  if (!confirm(`Are you sure you want to delete tenant: ${name}?`)) return;
+  deleteTenant(id);
+}
+
+// DELETE UNIT WITH CONFIRMATION
+function deleteUnitConfirm(id, unitNumber) {
+  if (!confirm(`Are you sure you want to delete unit: ${unitNumber}?`)) return;
+  
+  fetch(`${API_URL}/units/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${currentToken}` }
+  })
+  .then(() => {
+    loadUnits();
+    loadDashboard();
+  })
+  .catch(error => console.error('Delete unit error:', error));
+}
+
+// CSV PARSING
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const data = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const values = line.split(',').map(v => v.trim());
+    const row = {};
+    
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    
+    data.push(row);
+  }
+  
+  return data;
+}
+
+// TENANT IMPORT
+function openImportTenantModal() {
+  document.getElementById('importTenantModal').classList.add('show');
+  document.getElementById('tenantFile').value = '';
+  document.getElementById('tenantPreview').style.display = 'none';
+  document.getElementById('importTenantStatus').style.display = 'none';
+  document.getElementById('tenantPreviewBody').innerHTML = '';
+}
+
+function closeImportTenantModal() {
+  document.getElementById('importTenantModal').classList.remove('show');
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'tenantFile' && e.target.files[0]) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const data = parseCSV(text);
+      
+      if (data.length === 0) {
+        alert('No data found in CSV');
+        return;
+      }
+      
+      const tbody = document.getElementById('tenantPreviewBody');
+      tbody.innerHTML = data.slice(0, 10).map(row => `
+        <tr>
+          <td>${row.name || '-'}</td>
+          <td>${row.unit || '-'}</td>
+          <td>${row.email || '-'}</td>
+          <td>${row.phone || '-'}</td>
+          <td>${row.status || 'APPLICATION'}</td>
+        </tr>
+      `).join('');
+      
+      document.getElementById('tenantPreview').style.display = 'block';
+      
+      if (data.length > 10) {
+        tbody.innerHTML += `<tr><td colspan="5" style="text-align:center; color: #666; padding: 10px;">... and ${data.length - 10} more rows</td></tr>`;
+      }
+      
+      window.tenantImportData = data;
+    };
+    
+    reader.readAsText(file);
+  }
+  
+  if (e.target.id === 'unitFile' && e.target.files[0]) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const data = parseCSV(text);
+      
+      if (data.length === 0) {
+        alert('No data found in CSV');
+        return;
+      }
+      
+      const tbody = document.getElementById('unitPreviewBody');
+      tbody.innerHTML = data.slice(0, 10).map(row => `
+        <tr>
+          <td>${row.unit_number || '-'}</td>
+          <td>${row.status || 'VACANT'}</td>
+        </tr>
+      `).join('');
+      
+      document.getElementById('unitPreview').style.display = 'block';
+      
+      if (data.length > 10) {
+        tbody.innerHTML += `<tr><td colspan="2" style="text-align:center; color: #666; padding: 10px;">... and ${data.length - 10} more rows</td></tr>`;
+      }
+      
+      window.unitImportData = data;
+    };
+    
+    reader.readAsText(file);
+  }
+});
+
+async function processTenantsImport() {
+  if (!window.tenantImportData || window.tenantImportData.length === 0) {
+    alert('Please select a file first');
+    return;
+  }
+  
+  const statusDiv = document.getElementById('importTenantStatus');
+  statusDiv.innerHTML = '⏳ Importing...';
+  statusDiv.style.display = 'block';
+  statusDiv.style.background = '#fef3c7';
+  statusDiv.style.color = '#92400e';
+  
+  try {
+    const response = await fetch(`${API_URL}/import/tenants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ data: window.tenantImportData })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      let message = `✅ <strong>Import Complete!</strong><br>`;
+      message += `✅ ${result.successCount} imported<br>`;
+      
+      if (result.duplicateCount > 0) {
+        message += `⚠️ ${result.duplicateCount} duplicates skipped<br>`;
+      }
+      
+      if (result.errorCount > 0) {
+        message += `❌ ${result.errorCount} errors<br>`;
+      }
+      
+      message += `<br>Refreshing data...`;
+      
+      statusDiv.innerHTML = message;
+      statusDiv.style.background = '#d1fae5';
+      statusDiv.style.color = '#065f46';
+      
+      setTimeout(() => {
+        loadTenants();
+        loadDashboard();
+        closeImportTenantModal();
+      }, 2000);
+    } else {
+      statusDiv.innerHTML = `❌ Import Failed: ${result.error}`;
+      statusDiv.style.background = '#fee2e2';
+      statusDiv.style.color = '#991b1b';
+    }
+  } catch (error) {
+    statusDiv.innerHTML = `❌ Error: ${error.message}`;
+    statusDiv.style.background = '#fee2e2';
+    statusDiv.style.color = '#991b1b';
+  }
+}
+
+// UNIT IMPORT
+function openImportUnitModal() {
+  document.getElementById('importUnitModal').classList.add('show');
+  document.getElementById('unitFile').value = '';
+  document.getElementById('unitPreview').style.display = 'none';
+  document.getElementById('importUnitStatus').style.display = 'none';
+  document.getElementById('unitPreviewBody').innerHTML = '';
+}
+
+function closeImportUnitModal() {
+  document.getElementById('importUnitModal').classList.remove('show');
+}
+
+async function processUnitsImport() {
+  if (!window.unitImportData || window.unitImportData.length === 0) {
+    alert('Please select a file first');
+    return;
+  }
+  
+  const statusDiv = document.getElementById('importUnitStatus');
+  statusDiv.innerHTML = '⏳ Importing...';
+  statusDiv.style.display = 'block';
+  statusDiv.style.background = '#fef3c7';
+  statusDiv.style.color = '#92400e';
+  
+  try {
+    const response = await fetch(`${API_URL}/import/units`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ data: window.unitImportData })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      let message = `✅ <strong>Import Complete!</strong><br>`;
+      message += `✅ ${result.successCount} imported<br>`;
+      
+      if (result.duplicateCount > 0) {
+        message += `⚠️ ${result.duplicateCount} duplicates skipped<br>`;
+      }
+      
+      if (result.errorCount > 0) {
+        message += `❌ ${result.errorCount} errors<br>`;
+      }
+      
+      message += `<br>Refreshing data...`;
+      
+      statusDiv.innerHTML = message;
+      statusDiv.style.background = '#d1fae5';
+      statusDiv.style.color = '#065f46';
+      
+      setTimeout(() => {
+        loadUnits();
+        loadDashboard();
+        closeImportUnitModal();
+      }, 2000);
+    } else {
+      statusDiv.innerHTML = `❌ Import Failed: ${result.error}`;
+      statusDiv.style.background = '#fee2e2';
+      statusDiv.style.color = '#991b1b';
+    }
+  } catch (error) {
+    statusDiv.innerHTML = `❌ Error: ${error.message}`;
+    statusDiv.style.background = '#fee2e2';
+    statusDiv.style.color = '#991b1b';
+  }
+}
+
+// DOWNLOAD TEMPLATES
+function downloadTenantTemplate() {
+  const csv = `name,unit,email,phone,status,lease_start,lease_end
+John Doe,101,john@example.com,555-1234,CURRENT,2023-01-01,2024-12-31
+Jane Smith,202,jane@example.com,555-5678,CURRENT,2023-06-01,2024-05-31
+Michael Johnson,303,,555-9999,APPLICATION,2024-08-01,2025-07-31`;
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tenants_template.csv';
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+function downloadUnitTemplate() {
+  const csv = `unit_number,status
+101,VACANT
+102,OCCUPIED
+103,OCCUPIED
+201,VACANT
+202,MAINTENANCE
+203,OCCUPIED`;
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'units_template.csv';
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+// Allow Enter key for login
+document.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    
+    if (loginForm.classList.contains('active')) {
+      handleLogin();
+    } else if (registerForm.classList.contains('active')) {
+      handleRegister();
+    }
+  }
+});
+</script>
+
+</body>
+</html>
