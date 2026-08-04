@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creekside Apartments - Property Management System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #333; }
+    
+    .container { display: flex; height: 100vh; }
+    .sidebar { width: 250px; background: #1e3a5f; color: white; padding: 20px; overflow-y: auto; }
+    .sidebar h2 { margin-bottom: 30px; font-size: 20px; }
+    .sidebar a, .sidebar button { display: block; padding: 12px 15px; margin-bottom: 8px; background: #2d5189; color: white; text-decoration: none; border: none; border-radius: 4px; cursor: pointer; text-align: left; transition: 0.2s; }
+    .sidebar a:hover, .sidebar button:hover { background: #3d6bb0; }
+    .sidebar a.active, .sidebar button.active { background: #00a8e8; }
+    
+    .main { flex: 1; display: flex; flex-direction: column; }
+    .header { background: white; padding: 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 24px; }
+    .content { flex: 1; overflow-y: auto; padding: 20px; }
+    
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-title { font-size: 22px; margin-bottom: 20px; font-weight: bold; color: #1e3a5f; }
+    
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-box { padding: 10px 15px; border: 1px solid #ddd; border-radius: 4px; width: 250px; }
+    .sort-select, .filter-select { padding: 10px 15px; border: 1px solid #ddd; border-radius: 4px; }
+    
+    .btn { padding: 10px 20px; background: #00a8e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; transition: 0.2s; }
+    .btn:hover { background: #0087b8; }
+    .btn-primary { background: #00a8e8; }
+    .btn-secondary { background: #666; }
+    .btn-danger { background: #d9534f; }
+    .btn-success { background: #5cb85c; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .table { width: 100%; border-collapse: collapse; background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .table thead { background: #f8f9fa; }
+    .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    .table tr:hover { background: #f9f9f9; }
+    .table input[type="checkbox"] { cursor: pointer; }
+    
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; border-radius: 8px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+    
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+    
+    .alert { padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+    .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    
+    .notice-card { background: white; border-left: 4px solid #00a8e8; padding: 15px; margin-bottom: 15px; border-radius: 4px; }
+    .notice-card h3 { margin-bottom: 8px; }
+    .notice-card p { margin: 4px 0; font-size: 14px; color: #666; }
+    
+    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+    .status-dot.sent { background: #5cb85c; }
+    .status-dot.pending { background: #f0ad4e; }
+    .status-dot.failed { background: #d9534f; }
+    .status-dot.delivered { background: #0275d8; }
+    
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+    .tab { padding: 10px 20px; background: none; border: none; cursor: pointer; font-weight: 500; border-bottom: 3px solid transparent; color: #666; }
+    .tab.active { color: #00a8e8; border-bottom-color: #00a8e8; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .loading { text-align: center; padding: 20px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <h2>📋 Creekside</h2>
+      <button onclick="navigateTo('dashboard')" class="nav-btn active">Dashboard</button>
+      <button onclick="navigateTo('tenants')" class="nav-btn">Tenants</button>
+      <button onclick="navigateTo('units')" class="nav-btn">Units</button>
+      <button onclick="navigateTo('templates')" class="nav-btn">Notice Templates</button>
+      <button onclick="navigateTo('notifications')" class="nav-btn">📬 Send Notices</button>
+      <button onclick="navigateTo('history')" class="nav-btn">📊 Notice History</button>
+      <hr style="margin: 20px 0; opacity: 0.3;">
+      <button onclick="logout()" style="background: #c23b22;">Logout</button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+      <div class="header">
+        <h1 id="pageTitle">Dashboard</h1>
+        <span id="userInfo" style="font-size: 14px; color: #666;">Loading...</span>
+      </div>
+
+      <div class="content">
+        <!-- DASHBOARD PAGE -->
+        <div id="dashboard" class="page active">
+          <h2 class="page-title">Dashboard</h2>
+          <div class="grid-2">
+            <div class="notice-card">
+              <h3>📊 Statistics</h3>
+              <p>Total Units: <strong id="totalUnits">0</strong></p>
+              <p>Total Tenants: <strong id="totalTenants">0</strong></p>
+              <p>Templates: <strong id="totalTemplates">0</strong></p>
+              <p>Notices Sent: <strong id="totalNotices">0</strong></p>
+            </div>
+            <div class="notice-card">
+              <h3>⚠️ Quick Stats</h3>
+              <p>Vacant Units: <strong id="vacantUnits">0</strong></p>
+              <p>Active Tenants: <strong id="activeTenants">0</strong></p>
+              <p>Pending Notices: <strong id="pendingNotices">0</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TENANTS PAGE -->
+        <div id="tenants" class="page">
+          <h2 class="page-title">Tenants Management</h2>
+          <div class="controls">
+            <input type="text" class="search-box" id="tenantSearch" placeholder="Search by name, email, unit...">
+            <select id="tenantStatusFilter" class="filter-select">
+              <option value="">-- All Statuses --</option>
+              <option value="APPLICATION">Application</option>
+              <option value="REVIEW">Review</option>
+              <option value="ASSIGNED">Assigned</option>
+              <option value="MOVING_IN">Moving In</option>
+              <option value="CURRENT">Current</option>
+              <option value="NOTICE_RECEIVED">Notice Received</option>
+              <option value="VACATED">Vacated</option>
+            </select>
+            <select id="tenantSort" class="sort-select">
+              <option value="name-asc">Sort: Name (A-Z)</option>
+              <option value="name-desc">Sort: Name (Z-A)</option>
+              <option value="unit-asc">Sort: Unit</option>
+              <option value="status-asc">Sort: Status</option>
+            </select>
+            <button class="btn btn-primary" onclick="openAddTenantModal()">+ Add Tenant</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Unit</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tenantsTableBody">
+              <tr><td colspan="6" class="loading">Loading tenants...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- UNITS PAGE -->
+        <div id="units" class="page">
+          <h2 class="page-title">Units Management</h2>
+          <div class="controls">
+            <input type="text" class="search-box" id="unitSearch" placeholder="Search by unit number or building...">
+            <select id="unitStatusFilter" class="filter-select">
+              <option value="">-- All Statuses --</option>
+              <option value="VACANT">Vacant</option>
+              <option value="OCCUPIED">Occupied</option>
+              <option value="MAINTENANCE">Maintenance</option>
+            </select>
+            <select id="unitSort" class="sort-select">
+              <option value="unit-asc">Sort: Unit (A-Z)</option>
+              <option value="unit-desc">Sort: Unit (Z-A)</option>
+              <option value="status-asc">Sort: Status</option>
+            </select>
+            <button class="btn btn-primary" onclick="openAddUnitModal()">+ Add Unit</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Unit Number</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="unitsTableBody">
+              <tr><td colspan="3" class="loading">Loading units...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- TEMPLATES PAGE -->
+        <div id="templates" class="page">
+          <h2 class="page-title">Notice Templates</h2>
+          <div class="controls">
+            <input type="text" class="search-box" id="templateSearch" placeholder="Search by name...">
+            <select id="templateSort" class="sort-select">
+              <option value="name-asc">Sort: Name (A-Z)</option>
+              <option value="name-desc">Sort: Name (Z-A)</option>
+              <option value="type-asc">Sort: Type</option>
+            </select>
+            <button class="btn btn-primary" onclick="openAddTemplateModal()">+ Create Template</button>
+            <button class="btn btn-secondary" onclick="openImportTemplateModal()">📤 Import CSV</button>
+            <button class="btn btn-secondary" onclick="downloadTemplateTemplate()">📥 Download Template</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Template Name</th>
+                <th>Notice Type</th>
+                <th>Subject</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="templatesTableBody">
+              <tr><td colspan="4" class="loading">Loading templates...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- NOTIFICATIONS / SEND NOTICES PAGE -->
+        <div id="notifications" class="page">
+          <h2 class="page-title">📬 Send Notices</h2>
+          
+          <div class="notice-card">
+            <h3>Create and Send Notice</h3>
+            
+            <div class="form-group">
+              <label>Select Notice Template</label>
+              <select id="noticeTemplateSelect" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                <option value="">-- Select Template --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Send To (Select Recipients)</label>
+              <select id="recipientType" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;" onchange="updateRecipientOptions()">
+                <option value="">-- Select How to Send --</option>
+                <option value="all">📌 All Units</option>
+                <option value="building">🏢 Select Building</option>
+                <option value="unit">🏠 Select Unit(s)</option>
+                <option value="unitStatus">🔄 By Unit Status</option>
+                <option value="tenantStatus">👤 By Tenant Status</option>
+              </select>
+            </div>
+
+            <div id="recipientOptions" style="margin-bottom: 15px;"></div>
+
+            <div class="form-group">
+              <label>Subject Line</label>
+              <input type="text" id="noticeSubject" placeholder="Email subject (auto-filled from template)">
+            </div>
+
+            <div class="form-group">
+              <label>Message Preview</label>
+              <textarea id="noticePreview" readonly style="background: #f5f5f5; color: #666;"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Delivery Method</label>
+              <select id="deliveryMethod" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                <option value="email">📧 Email</option>
+                <option value="sms">📱 SMS</option>
+                <option value="certified">📮 Certified Mail</option>
+                <option value="inapp">📱 In-App</option>
+                <option value="all">🔔 All Methods</option>
+              </select>
+            </div>
+
+            <button class="btn btn-success" onclick="sendNotices()" style="width: 100%; padding: 15px; font-size: 16px;">🚀 Send Notices</button>
+            
+            <div id="sendStatus" style="margin-top: 15px;"></div>
+          </div>
+
+          <div id="recipientPreview" class="notice-card" style="display: none; margin-top: 20px;">
+            <h3>Recipients Summary</h3>
+            <p id="recipientCount">Selected: 0 recipients</p>
+            <div id="recipientList" style="max-height: 200px; overflow-y: auto; margin-top: 10px;"></div>
+          </div>
+        </div>
+
+        <!-- NOTICE HISTORY PAGE -->
+        <div id="history" class="page">
+          <h2 class="page-title">📊 Notice History & Tracking</h2>
+          <div class="controls">
+            <input type="text" class="search-box" id="historySearch" placeholder="Search by tenant, unit, template...">
+            <select id="historyStatusFilter" class="filter-select">
+              <option value="">-- All Statuses --</option>
+              <option value="SENT">Sent</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="RECEIVED">Received</option>
+              <option value="ACKNOWLEDGED">Acknowledged</option>
+              <option value="FAILED">Failed</option>
+              <option value="EXPIRED">Expired</option>
+            </select>
+            <select id="historySort" class="sort-select">
+              <option value="date-desc">Sort: Newest First</option>
+              <option value="date-asc">Sort: Oldest First</option>
+              <option value="status-asc">Sort: Status</option>
+            </select>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Tenant / Unit</th>
+                <th>Notice Type</th>
+                <th>Status</th>
+                <th>Sent Date</th>
+                <th>Delivery Method</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr><td colspan="6" class="loading">Loading notice history...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <!-- Template Preview Modal -->
+  <div id="templatePreviewModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Template Preview</h2>
+        <button class="close-btn" onclick="closeTemplatePreviewModal()">&times;</button>
+      </div>
+      <div id="templatePreviewContent"></div>
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="openEditTemplateModal()">✏️ Edit</button>
+        <button class="btn" onclick="closeTemplatePreviewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Template Modal -->
+  <div id="editTemplateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Notice Template</h2>
+        <button class="close-btn" onclick="closeEditTemplateModal()">&times;</button>
+      </div>
+      
+      <div class="form-group">
+        <label>Template Name</label>
+        <input type="text" id="editTemplateName" placeholder="Template name">
+      </div>
+      
+      <div class="form-group">
+        <label>Notice Type</label>
+        <select id="editTemplateType">
+          <option value="30_DAY_NOTICE">30-Day Notice to Quit</option>
+          <option value="60_DAY_NOTICE">60-Day Notice to Vacate</option>
+          <option value="RENT_DUE">Rent Due Reminder</option>
+          <option value="RENT_LATE">Rent Late Notice</option>
+          <option value="LEASE_RENEWAL">Lease Renewal Notice</option>
+          <option value="MAINTENANCE_ACCESS">Maintenance Access Notice</option>
+          <option value="MAINTENANCE_NEEDED">Maintenance Needed</option>
+          <option value="LEASE_VIOLATION">Lease Violation Notice</option>
+          <option value="EMERGENCY_MAINTENANCE">Emergency Maintenance</option>
+          <option value="SECURITY_DEPOSIT">Security Deposit Return</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Subject Line</label>
+        <input type="text" id="editTemplateSubject" placeholder="Email subject">
+      </div>
+      
+      <div class="form-group">
+        <label>Content</label>
+        <textarea id="editTemplateContent" placeholder="Template content (use {tenant_name}, {unit}, {date})"></textarea>
+      </div>
+      
+      <button class="btn btn-success" style="width: 100%;" onclick="saveEditedTemplate()">💾 Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Notice Detail Modal -->
+  <div id="noticeDetailModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Notice Details</h2>
+        <button class="close-btn" onclick="closeNoticeDetailModal()">&times;</button>
+      </div>
+      <div id="noticeDetailContent"></div>
+      <button class="btn" onclick="closeNoticeDetailModal()" style="width: 100%; margin-top: 20px;">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://creekside-prod-backend.onrender.com/api';
+    let currentToken = localStorage.getItem('token');
+    let currentPage = 'dashboard';
+    let selectedTemplateId = null;
+    let selectedRecipients = [];
+
+    // ===== NAVIGATION =====
+    function navigateTo(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(page).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      currentPage = page;
+      
+      if (page === 'tenants') loadTenants();
+      if (page === 'units') loadUnits();
+      if (page === 'templates') loadTemplates();
+      if (page === 'notifications') loadTemplatesForNotification();
+      if (page === 'history') loadNoticeHistory();
+      if (page === 'dashboard') loadDashboard();
+    }
+
+    // ===== AUTHENTICATION =====
+    window.addEventListener('load', () => {
+      if (!currentToken) {
+        window.location.href = 'login.html';
+      } else {
+        loadDashboard();
+      }
+    });
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    }
+
+    // ===== DASHBOARD =====
+    async function loadDashboard() {
+      try {
+        const [units, tenants, templates, notices] = await Promise.all([
+          fetch(`${API_URL}/units`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
+          fetch(`${API_URL}/tenants`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
+          fetch(`${API_URL}/notice-templates`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()),
+          fetch(`${API_URL}/tenant-notices`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json()).catch(() => [])
+        ]);
+
+        document.getElementById('totalUnits').textContent = units.length;
+        document.getElementById('totalTenants').textContent = tenants.length;
+        document.getElementById('totalTemplates').textContent = templates.length;
+        document.getElementById('totalNotices').textContent = notices.length || 0;
+        document.getElementById('vacantUnits').textContent = units.filter(u => u.status === 'VACANT').length;
+        document.getElementById('activeTenants').textContent = tenants.filter(t => t.status === 'CURRENT').length;
+        document.getElementById('pendingNotices').textContent = notices.filter(n => n.status === 'SENT' || n.status === 'PENDING').length || 0;
+      } catch (error) {
+        console.error('Dashboard error:', error);
+      }
+    }
+
+    // ===== TENANTS =====
+    async function loadTenants() {
+      try {
+        const response = await fetch(`${API_URL}/tenants`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        let tenants = await response.json();
+        
+        // Filter
+        const statusFilter = document.getElementById('tenantStatusFilter')?.value;
+        const searchTerm = document.getElementById('tenantSearch')?.value.toLowerCase() || '';
+        
+        if (statusFilter) tenants = tenants.filter(t => t.status === statusFilter);
+        if (searchTerm) tenants = tenants.filter(t => 
+          t.name?.toLowerCase().includes(searchTerm) || 
+          t.email?.toLowerCase().includes(searchTerm) ||
+          t.phone?.includes(searchTerm) ||
+          t.unit?.toLowerCase().includes(searchTerm)
+        );
+        
+        // Sort
+        const sortValue = document.getElementById('tenantSort')?.value || 'name-asc';
+        if (sortValue === 'name-asc') tenants.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (sortValue === 'name-desc') tenants.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+        if (sortValue === 'unit-asc') tenants.sort((a, b) => (a.unit || '').localeCompare(b.unit || ''));
+        if (sortValue === 'status-asc') tenants.sort((a, b) => (a.status || '').localeCompare(b.status || ''));
+        
+        const tbody = document.getElementById('tenantsTableBody');
+        tbody.innerHTML = tenants.map(tenant => `
+          <tr>
+            <td>${tenant.name || '-'}</td>
+            <td>${tenant.unit || '-'}</td>
+            <td>${tenant.email || '-'}</td>
+            <td>${tenant.phone || '-'}</td>
+            <td><span class="badge badge-info">${tenant.status || '-'}</span></td>
+            <td>
+              <button class="btn btn-primary btn-small" onclick="sendNoticeToTenant(${tenant.id})">📬 Send</button>
+              <button class="btn btn-secondary btn-small" onclick="editTenant(${tenant.id})">Edit</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load tenants error:', error);
+      }
+    }
+
+    // ===== UNITS =====
+    async function loadUnits() {
+      try {
+        const response = await fetch(`${API_URL}/units`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        let units = await response.json();
+        
+        // Filter
+        const statusFilter = document.getElementById('unitStatusFilter')?.value;
+        const searchTerm = document.getElementById('unitSearch')?.value.toLowerCase() || '';
+        
+        if (statusFilter) units = units.filter(u => u.status === statusFilter);
+        if (searchTerm) units = units.filter(u => u.unit_number?.toLowerCase().includes(searchTerm));
+        
+        // Sort
+        const sortValue = document.getElementById('unitSort')?.value || 'unit-asc';
+        if (sortValue === 'unit-asc') units.sort((a, b) => (a.unit_number || '').localeCompare(b.unit_number || ''));
+        if (sortValue === 'unit-desc') units.sort((a, b) => (b.unit_number || '').localeCompare(a.unit_number || ''));
+        if (sortValue === 'status-asc') units.sort((a, b) => (a.status || '').localeCompare(b.status || ''));
+        
+        const tbody = document.getElementById('unitsTableBody');
+        tbody.innerHTML = units.map(unit => `
+          <tr>
+            <td>${unit.unit_number}</td>
+            <td><span class="badge ${unit.status === 'VACANT' ? 'badge-success' : unit.status === 'MAINTENANCE' ? 'badge-warning' : 'badge-danger'}">${unit.status}</span></td>
+            <td>
+              <button class="btn btn-primary btn-small" onclick="sendNoticeToUnit(${unit.id})">📬 Send</button>
+              <button class="btn btn-secondary btn-small" onclick="editUnit(${unit.id})">Edit</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load units error:', error);
+      }
+    }
+
+    // ===== TEMPLATES =====
+    async function loadTemplates() {
+      try {
+        const response = await fetch(`${API_URL}/notice-templates`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        let templates = await response.json();
+        
+        // Filter
+        const searchTerm = document.getElementById('templateSearch')?.value.toLowerCase() || '';
+        if (searchTerm) templates = templates.filter(t => t.name?.toLowerCase().includes(searchTerm));
+        
+        // Sort
+        const sortValue = document.getElementById('templateSort')?.value || 'name-asc';
+        if (sortValue === 'name-asc') templates.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (sortValue === 'name-desc') templates.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+        if (sortValue === 'type-asc') templates.sort((a, b) => (a.notice_type || '').localeCompare(b.notice_type || ''));
+        
+        const tbody = document.getElementById('templatesTableBody');
+        tbody.innerHTML = templates.map(template => `
+          <tr>
+            <td>${template.name}</td>
+            <td>${template.notice_type}</td>
+            <td>${template.subject || '-'}</td>
+            <td>
+              <button class="btn btn-primary btn-small" onclick="previewTemplate(${template.id})">👁️ Preview</button>
+              <button class="btn btn-secondary btn-small" onclick="editTemplateModal(${template.id})">✏️ Edit</button>
+              <button class="btn btn-danger btn-small" onclick="deleteTemplate(${template.id})">🗑️ Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load templates error:', error);
+      }
+    }
+
+    // ===== TEMPLATE PREVIEW =====
+    async function previewTemplate(id) {
+      try {
+        const response = await fetch(`${API_URL}/notice-templates`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        const templates = await response.json();
+        const template = templates.find(t => t.id === id);
+        
+        if (template) {
+          selectedTemplateId = id;
+          const content = `
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;">
+              <h3>${template.name}</h3>
+              <p style="color: #666; font-size: 12px;">Type: ${template.notice_type}</p>
+              ${template.subject ? `<p style="color: #666; font-size: 12px;">Subject: ${template.subject}</p>` : ''}
+              <hr style="margin: 15px 0;">
+              ${template.content.replace(/\n/g, '<br>')}
+            </div>
+          `;
+          document.getElementById('templatePreviewContent').innerHTML = content;
+          document.getElementById('templatePreviewModal').classList.add('show');
+        }
+      } catch (error) {
+        console.error('Preview error:', error);
+      }
+    }
+
+    function closeTemplatePreviewModal() {
+      document.getElementById('templatePreviewModal').classList.remove('show');
+    }
+
+    // ===== TEMPLATE EDIT =====
+    async function editTemplateModal(id) {
+      try {
+        const response = await fetch(`${API_URL}/notice-templates`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        const templates = await response.json();
+        const template = templates.find(t => t.id === id);
+        
+        if (template) {
+          selectedTemplateId = id;
+          document.getElementById('editTemplateName').value = template.name;
+          document.getElementById('editTemplateType').value = template.notice_type;
+          document.getElementById('editTemplateSubject').value = template.subject || '';
+          document.getElementById('editTemplateContent').value = template.content;
+          document.getElementById('editTemplateModal').classList.add('show');
+        }
+      } catch (error) {
+        console.error('Edit template error:', error);
+      }
+    }
+
+    function closeEditTemplateModal() {
+      document.getElementById('editTemplateModal').classList.remove('show');
+    }
+
+    async function saveEditedTemplate() {
+      try {
+        const response = await fetch(`${API_URL}/notice-templates/${selectedTemplateId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify({
+            name: document.getElementById('editTemplateName').value,
+            notice_type: document.getElementById('editTemplateType').value,
+            subject: document.getElementById('editTemplateSubject').value,
+            content: document.getElementById('editTemplateContent').value
+          })
+        });
+
+        if (response.ok) {
+          alert('✅ Template updated!');
+          closeEditTemplateModal();
+          loadTemplates();
+        } else {
+          alert('❌ Error updating template');
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    async function deleteTemplate(id) {
+      if (!confirm('Delete this template?')) return;
+      try {
+        await fetch(`${API_URL}/notice-templates/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        alert('✅ Template deleted!');
+        loadTemplates();
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+
+    // ===== NOTIFICATIONS / SEND NOTICES =====
+    async function loadTemplatesForNotification() {
+      try {
+        const response = await fetch(`${API_URL}/notice-templates`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        const templates = await response.json();
+        
+        const select = document.getElementById('noticeTemplateSelect');
+        select.innerHTML = '<option value="">-- Select Template --</option>';
+        templates.forEach(t => {
+          const option = document.createElement('option');
+          option.value = t.id;
+          option.textContent = `${t.name} (${t.notice_type})`;
+          option.dataset.template = JSON.stringify(t);
+          select.appendChild(option);
+        });
+
+        select.addEventListener('change', function() {
+          if (this.value) {
+            const template = JSON.parse(this.options[this.selectedIndex].dataset.template);
+            document.getElementById('noticeSubject').value = template.subject || template.name;
+            document.getElementById('noticePreview').value = template.content;
+          }
+        });
+      } catch (error) {
+        console.error('Load templates error:', error);
+      }
+    }
+
+    async function updateRecipientOptions() {
+      const type = document.getElementById('recipientType').value;
+      const optionsDiv = document.getElementById('recipientOptions');
+      optionsDiv.innerHTML = '';
+      selectedRecipients = [];
+
+      try {
+        if (type === 'all') {
+          optionsDiv.innerHTML = '<p style="padding: 10px; background: #e3f2fd; border-radius: 4px;">📌 Will send to all units in the property</p>';
+          selectedRecipients = 'all';
+        } else if (type === 'building') {
+          const buildings = new Set();
+          const units = await fetch(`${API_URL}/units`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json());
+          units.forEach(u => {
+            const building = u.unit_number?.split('-')[0];
+            if (building) buildings.add(building);
+          });
+          
+          optionsDiv.innerHTML = '<label>Select Building:</label>';
+          const select = document.createElement('select');
+          select.style.cssText = 'padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; margin-top: 5px;';
+          select.innerHTML = '<option value="">-- Select Building --</option>' + 
+            Array.from(buildings).map(b => `<option value="${b}">Building ${b}</option>`).join('');
+          select.addEventListener('change', function() {
+            if (this.value) {
+              selectedRecipients = { building: this.value, units: units.filter(u => u.unit_number?.startsWith(this.value + '-')) };
+              updateRecipientPreview();
+            }
+          });
+          optionsDiv.appendChild(select);
+        } else if (type === 'unit') {
+          const units = await fetch(`${API_URL}/units`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json());
+          optionsDiv.innerHTML = '<label>Select Units:</label>';
+          const container = document.createElement('div');
+          container.style.cssText = 'max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-top: 5px;';
+          units.forEach(u => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = u.id;
+            checkbox.style.marginRight = '8px';
+            checkbox.addEventListener('change', function() {
+              selectedRecipients = units.filter((_, i) => container.querySelectorAll('input')[i].checked);
+              updateRecipientPreview();
+            });
+            const label = document.createElement('label');
+            label.style.cssText = 'display: block; padding: 5px; cursor: pointer;';
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(u.unit_number + ' (' + u.status + ')'));
+            container.appendChild(label);
+          });
+          optionsDiv.appendChild(container);
+        } else if (type === 'unitStatus') {
+          optionsDiv.innerHTML = '<label>Select Unit Status:</label>';
+          const select = document.createElement('select');
+          select.style.cssText = 'padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; margin-top: 5px;';
+          select.innerHTML = '<option value="">-- Select Status --</option>' + 
+            ['VACANT', 'OCCUPIED', 'MAINTENANCE'].map(s => `<option value="${s}">${s}</option>`).join('');
+          select.addEventListener('change', async function() {
+            if (this.value) {
+              const units = await fetch(`${API_URL}/units`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json());
+              selectedRecipients = units.filter(u => u.status === this.value);
+              updateRecipientPreview();
+            }
+          });
+          optionsDiv.appendChild(select);
+        } else if (type === 'tenantStatus') {
+          optionsDiv.innerHTML = '<label>Select Tenant Status:</label>';
+          const select = document.createElement('select');
+          select.style.cssText = 'padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; margin-top: 5px;';
+          select.innerHTML = '<option value="">-- Select Status --</option>' + 
+            ['APPLICATION', 'REVIEW', 'ASSIGNED', 'MOVING_IN', 'CURRENT', 'NOTICE_RECEIVED', 'VACATED'].map(s => `<option value="${s}">${s}</option>`).join('');
+          select.addEventListener('change', async function() {
+            if (this.value) {
+              const tenants = await fetch(`${API_URL}/tenants`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).then(r => r.json());
+              selectedRecipients = tenants.filter(t => t.status === this.value);
+              updateRecipientPreview();
+            }
+          });
+          optionsDiv.appendChild(select);
+        }
+      } catch (error) {
+        console.error('Update recipient options error:', error);
+      }
+    }
+
+    function updateRecipientPreview() {
+      const previewDiv = document.getElementById('recipientPreview');
+      const countDiv = document.getElementById('recipientCount');
+      const listDiv = document.getElementById('recipientList');
+
+      if (selectedRecipients === 'all') {
+        previewDiv.style.display = 'block';
+        countDiv.textContent = 'Will send to: All units in property';
+        listDiv.innerHTML = '<p style="font-size: 12px; color: #666;">Fetching unit count...</p>';
+      } else if (Array.isArray(selectedRecipients)) {
+        previewDiv.style.display = 'block';
+        countDiv.textContent = `Selected: ${selectedRecipients.length} recipients`;
+        listDiv.innerHTML = selectedRecipients.map(r => `
+          <p style="padding: 5px; font-size: 12px; border-bottom: 1px solid #eee;">
+            ${r.name ? `${r.name} - ` : ''}${r.unit || r.unit_number} (${r.status})
+          </p>
+        `).join('');
+      }
+    }
+
+    async function sendNotices() {
+      const templateId = document.getElementById('noticeTemplateSelect').value;
+      if (!templateId) { alert('❌ Please select a template'); return; }
+      if (!selectedRecipients || (Array.isArray(selectedRecipients) && selectedRecipients.length === 0)) { alert('❌ Please select recipients'); return; }
+
+      const statusDiv = document.getElementById('sendStatus');
+      statusDiv.innerHTML = '<div class="alert alert-info">📤 Sending notices...</div>';
+
+      try {
+        // Send notices
+        const response = await fetch(`${API_URL}/send-notices`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify({
+            template_id: templateId,
+            recipients: selectedRecipients,
+            delivery_method: document.getElementById('deliveryMethod').value
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          statusDiv.innerHTML = `<div class="alert alert-success">✅ ${data.sent} notices sent successfully!</div>`;
+          setTimeout(() => loadNoticeHistory(), 1000);
+        } else {
+          statusDiv.innerHTML = `<div class="alert alert-error">❌ ${data.error || 'Error sending notices'}</div>`;
+        }
+      } catch (error) {
+        statusDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
+      }
+    }
+
+    // ===== NOTICE HISTORY =====
+    async function loadNoticeHistory() {
+      try {
+        const response = await fetch(`${API_URL}/tenant-notices`, { headers: { 'Authorization': `Bearer ${currentToken}` } }).catch(() => ({ ok: false }));
+        if (!response.ok) {
+          document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="6" class="loading">No notices sent yet</td></tr>';
+          return;
+        }
+
+        let notices = await response.json();
+        
+        // Filter
+        const statusFilter = document.getElementById('historyStatusFilter')?.value;
+        const searchTerm = document.getElementById('historySearch')?.value.toLowerCase() || '';
+        
+        if (statusFilter) notices = notices.filter(n => n.status === statusFilter);
+        if (searchTerm) notices = notices.filter(n => 
+          (n.tenant_name?.toLowerCase() || '').includes(searchTerm) ||
+          (n.unit?.toLowerCase() || '').includes(searchTerm) ||
+          (n.notice_type?.toLowerCase() || '').includes(searchTerm)
+        );
+        
+        // Sort
+        const sortValue = document.getElementById('historySort')?.value || 'date-desc';
+        if (sortValue === 'date-desc') notices.sort((a, b) => new Date(b.sent_date) - new Date(a.sent_date));
+        if (sortValue === 'date-asc') notices.sort((a, b) => new Date(a.sent_date) - new Date(b.sent_date));
+        if (sortValue === 'status-asc') notices.sort((a, b) => (a.status || '').localeCompare(b.status || ''));
+        
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = notices.map(notice => `
+          <tr>
+            <td>${notice.tenant_name || notice.unit || '-'}</td>
+            <td>${notice.notice_type}</td>
+            <td>
+              <span class="status-dot ${notice.status?.toLowerCase() || 'pending'}"></span>
+              <span class="badge badge-info">${notice.status || 'SENT'}</span>
+            </td>
+            <td>${notice.sent_date ? new Date(notice.sent_date).toLocaleDateString() : '-'}</td>
+            <td>${notice.delivery_method || 'Email'}</td>
+            <td>
+              <button class="btn btn-primary btn-small" onclick="viewNoticeDetail(${notice.id})">👁️ View</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load history error:', error);
+      }
+    }
+
+    async function viewNoticeDetail(id) {
+      try {
+        const response = await fetch(`${API_URL}/tenant-notices`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        const notices = await response.json();
+        const notice = notices.find(n => n.id === id);
+        
+        if (notice) {
+          const content = `
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 4px;">
+              <h3>${notice.tenant_name || notice.unit}</h3>
+              <p><strong>Notice Type:</strong> ${notice.notice_type}</p>
+              <p><strong>Status:</strong> <span class="badge badge-info">${notice.status}</span></p>
+              <p><strong>Sent Date:</strong> ${notice.sent_date ? new Date(notice.sent_date).toLocaleDateString() : '-'}</p>
+              <p><strong>Delivery Method:</strong> ${notice.delivery_method || 'Email'}</p>
+              ${notice.received_date ? `<p><strong>Received Date:</strong> ${new Date(notice.received_date).toLocaleDateString()}</p>` : ''}
+              ${notice.response_date ? `<p><strong>Response Date:</strong> ${new Date(notice.response_date).toLocaleDateString()}</p>` : ''}
+            </div>
+          `;
+          document.getElementById('noticeDetailContent').innerHTML = content;
+          document.getElementById('noticeDetailModal').classList.add('show');
+        }
+      } catch (error) {
+        console.error('View detail error:', error);
+      }
+    }
+
+    function closeNoticeDetailModal() {
+      document.getElementById('noticeDetailModal').classList.remove('show');
+    }
+
+    // ===== UTILITY FUNCTIONS =====
+    function openAddTenantModal() {
+      alert('Add tenant feature coming soon');
+    }
+
+    function openAddUnitModal() {
+      alert('Add unit feature coming soon');
+    }
+
+    function openAddTemplateModal() {
+      alert('Add template feature coming soon (click Create Template button)');
+    }
+
+    function openImportTemplateModal() {
+      alert('Import CSV feature - use the existing import functionality');
+    }
+
+    function downloadTemplateTemplate() {
+      alert('Download template feature coming soon');
+    }
+
+    function sendNoticeToTenant(id) {
+      alert('Send to tenant feature coming soon - use Send Notices tab');
+    }
+
+    function sendNoticeToUnit(id) {
+      alert('Send to unit feature coming soon - use Send Notices tab');
+    }
+
+    function editTenant(id) {
+      alert('Edit tenant feature coming soon');
+    }
+
+    function editUnit(id) {
+      alert('Edit unit feature coming soon');
+    }
+
+    // Add button styling
+    const style = document.createElement('style');
+    style.textContent = `
+      .btn-small { padding: 6px 12px; font-size: 12px; }
+      .nav-btn { width: 100%; text-align: left; }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
