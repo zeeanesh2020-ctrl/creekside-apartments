@@ -744,6 +744,261 @@ app.delete('/api/notice-templates/:id', verifyToken, async (req, res) => {
   }
 });
 
+// ===== SEND NOTICES ENDPOINT =====
+app.post('/api/send-notices', authenticateJWT, async (req, res) => {
+  try {
+    const { template_id, recipients, delivery_method } = req.body;
+    const company_id = req.company_id;
+    const user_id = req.user_id;
+
+    // Validation
+    if (!template_id || !recipients || !delivery_method) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get template
+    const templateResult = await pool.query(
+      'SELECT * FROM notice_templates WHERE id = $1 AND company_id = $2',
+      [template_id, company_id]
+    );
+
+    if (templateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    const template = templateResult.rows[0];
+
+    // Determine recipient list
+    let recipientList = [];
+
+    if (recipients === 'all') {
+      // All tenants
+      const allTenants = await pool.query(
+        'SELECT id, unit FROM tenants WHERE company_id = $1 ORDER BY unit',
+        [company_id]
+      );
+      recipientList = allTenants.rows;
+    } else if (Array.isArray(recipients) && recipients.length > 0) {
+      // Specific recipients (could be tenants or units)
+      if (recipients[0].id) {
+        // Tenant objects
+        recipientList = recipients;
+      } else {
+        // IDs only
+        const selectedTenants = await pool.query(
+          'SELECT id, unit FROM tenants WHERE id = ANY($1)',
+          [recipients]
+        );
+        recipientList = selectedTenants.rows;
+      }
+    } else if (recipients.building) {
+      // By building
+      const buildingTenants = await pool.query(
+        'SELECT id, unit FROM tenants WHERE company_id = $1 AND unit LIKE $2 ORDER BY unit',
+        [company_id, recipients.building + '%']
+      );
+      recipientList = buildingTenants.rows;
+    }
+
+    // Create tenant notices for each recipient
+    let noticeCount = 0;
+    const now = new Date();
+    
+    for (const tenant of recipientList) {
+      const tenantId = tenant.id || tenant;
+      
+      try {
+        await pool.query(
+          `INSERT INTO tenant_notices (tenant_id, template_id, status, delivery_method, sent_date, company_id)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT DO NOTHING`,
+          [tenantId, template_id, 'SENT', delivery_method, now, company_id]
+        );
+        noticeCount++;
+      } catch (err) {
+        console.error(`Error creating notice for tenant ${tenantId}:`, err);
+      }
+    }
+
+    // Log to audit
+    try {
+      await pool.query(
+        `INSERT INTO audit_log (company_id, user_id, action, resource_type, resource_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [company_id, user_id, 'SEND_NOTICES', 'notice', template_id, now]
+      );
+    } catch (err) {
+      console.error('Audit log error:', err);
+    }
+
+    res.json({ 
+      sent: noticeCount, 
+      message: `${noticeCount} notices sent`,
+      template_id: template_id,
+      delivery_method: delivery_method
+    });
+  } catch (error) {
+    console.error('Send notices error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== GET ALL TENANT NOTICES =====
+app.get('/api/tenant-notices', authenticateJWT, async (req, res) => {
+  try {
+    const company_id = req.company_id;
+
+    const result = await pool.query(
+      `SELECT 
+        tn.id,
+        tn.tenant_id,
+        tn.template_id,
+        tn.status,
+        tn.delivery_method,
+        tn.sent_date,
+        tn.received_date,
+        tn.response_date,
+        t.name as tenant_name,
+        t.email as tenant_email,
+        t.unit,
+        nt.name as notice_type,
+        nt.notice_type,
+        nt.subject
+       FROM tenant_notices tn
+       LEFT JOIN tenants t ON tn.tenant_id = t.id
+       LEFT JOIN notice_templates nt ON tn.template_id = nt.id
+       WHERE tn.company_id = $1
+       ORDER BY tn.sent_date DESC
+       LIMIT 500`,
+      [company_id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get notices error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== GET SPECIFIC TENANT NOTICE =====
+app.get('/api/tenant-notices/:id', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company_id = req.company_id;
+
+    const result = await pool.query(
+      `SELECT 
+        tn.id,
+        tn.tenant_id,
+        tn.template_id,
+        tn.status,
+        tn.delivery_method,
+        tn.sent_date,
+        tn.received_date,
+        tn.response_date,
+        t.name as tenant_name,
+        t.email as tenant_email,
+        t.unit,
+        nt.name as notice_type,
+        nt.notice_type,
+        nt.subject,
+        nt.content
+       FROM tenant_notices tn
+       LEFT JOIN tenants t ON tn.tenant_id = t.id
+       LEFT JOIN notice_templates nt ON tn.template_id = nt.id
+       WHERE tn.id = $1 AND tn.company_id = $2`,
+      [id, company_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get notice error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== UPDATE TENANT NOTICE STATUS =====
+app.patch('/api/tenant-notices/:id/status', authenticateJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, received_date, response_date } = req.body;
+    const company_id = req.company_id;
+    const user_id = req.user_id;
+
+    // Validation
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+
+    // Update notice
+    const updateResult = await pool.query(
+      `UPDATE tenant_notices 
+       SET status = $1, 
+           received_date = COALESCE($2, received_date),
+           response_date = COALESCE($3, response_date),
+           updated_at = NOW()
+       WHERE id = $4 AND company_id = $5
+       RETURNING *`,
+      [status, received_date || null, response_date || null, id, company_id]
+    );
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+
+    // Log to audit
+    try {
+      await pool.query(
+        `INSERT INTO audit_log (company_id, user_id, action, resource_type, resource_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [company_id, user_id, 'UPDATE_NOTICE_STATUS', 'notice', id, new Date()]
+      );
+    } catch (err) {
+      console.error('Audit log error:', err);
+    }
+
+    res.json({ 
+      message: 'Notice status updated',
+      notice: updateResult.rows[0]
+    });
+  } catch (error) {
+    console.error('Update notice status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== GET AUDIT LOG =====
+app.get('/api/audit-log', authenticateJWT, async (req, res) => {
+  try {
+    const company_id = req.company_id;
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        company_id,
+        user_id,
+        action,
+        resource_type,
+        resource_id,
+        created_at
+       FROM audit_log
+       WHERE company_id = $1
+       ORDER BY created_at DESC
+       LIMIT 500`,
+      [company_id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get audit log error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ===== TENANT NOTICES =====
 app.get('/api/tenants/:id/notices', verifyToken, async (req, res) => {
   try {
