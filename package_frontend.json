@@ -1,0 +1,23 @@
+{
+  "name": "creekside-frontend",
+  "version": "1.0.0",
+  "description": "Creekside Apartments - Property Management System Frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "property-management",
+    "creekside",
+    "apartments"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
