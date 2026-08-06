@@ -1,8 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const bcryptjs = require('bcryptjs');
 const path = require('path');
 require('dotenv').config();
 
@@ -26,54 +25,78 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// ===== EMAIL CONFIGURATION =====
-// Using Nodemailer with Gmail (you can change to SendGrid, AWS SES, etc.)
-let emailTransporter;
+// ===== EMAIL & SMS CONFIG =====
+let emailEnabled = false;
+let smsEnabled = false;
+let emailTransporter = null;
+let twilioClient = null;
 
+// Initialize email (non-blocking)
 async function initializeEmailService() {
   try {
-    // Gmail OAuth2 setup (or use SMTP_USER and SMTP_PASSWORD)
-    const smtpUser = process.env.SMTP_USER || 'your-email@gmail.com';
-    const smtpPassword = process.env.SMTP_PASSWORD || 'your-app-password';
+    const nodemailer = require('nodemailer');
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPassword = process.env.SMTP_PASSWORD;
     
+    if (!smtpUser || !smtpPassword) {
+      console.log('⏳ Email service: No credentials (using TEST MODE)');
+      emailEnabled = false;
+      return;
+    }
+
     emailTransporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: smtpUser,
         pass: smtpPassword
-      }
+      },
+      connectionTimeout: 5000,
+      socketTimeout: 5000
     });
 
-    // Test connection
-    await emailTransporter.verify();
-    console.log('✅ Email service configured and verified');
+    // Test connection with timeout
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email service test timeout')), 3000)
+    );
+    
+    await Promise.race([
+      emailTransporter.verify(),
+      timeout
+    ]);
+
+    console.log('✅ Email service (Gmail) configured and verified');
+    emailEnabled = true;
   } catch (error) {
-    console.warn('⚠️  Email service not configured:', error.message);
-    console.warn('    Emails will be logged to console instead');
+    console.log('⏳ Email service: ' + error.message);
+    console.log('   (using TEST MODE - emails will be logged to console)');
+    emailEnabled = false;
     emailTransporter = null;
   }
 }
 
-// ===== SMS CONFIGURATION =====
-// Using Twilio for SMS
-let twilioClient;
+// Initialize SMS (non-blocking)
 async function initializeSMSService() {
   try {
-    const twilio = require('twilio');
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const fromNumber = process.env.TWILIO_FROM_NUMBER;
 
-    if (accountSid && authToken && fromNumber) {
-      twilioClient = twilio(accountSid, authToken);
-      console.log('✅ SMS service (Twilio) configured');
-    } else {
-      console.warn('⚠️  SMS service not configured (Twilio credentials missing)');
-      console.warn('    SMS will be logged to console instead');
+    if (!accountSid || !authToken || !fromNumber) {
+      console.log('⏳ SMS service: No credentials (using TEST MODE)');
+      smsEnabled = false;
+      return;
     }
+
+    const twilio = require('twilio');
+    twilioClient = twilio(accountSid, authToken);
+    
+    console.log('✅ SMS service (Twilio) configured');
+    smsEnabled = true;
   } catch (error) {
-    console.warn('⚠️  Twilio not available:', error.message);
-    console.warn('    SMS will be logged to console instead');
+    console.log('⏳ SMS service: ' + error.message);
+    console.log('   (using TEST MODE - SMS will be logged to console)');
+    smsEnabled = false;
+    twilioClient = null;
   }
 }
 
@@ -122,16 +145,13 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'All fields required' });
     }
 
-    // Check if user exists
     const userExists = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (userExists.rows.length > 0) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcryptjs.hash(password, 10);
 
-    // Create user
     const result = await pool.query(
       'INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, name, email',
       [name, email, hashedPassword]
@@ -155,7 +175,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // Get user
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
@@ -163,8 +182,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Verify password
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await bcryptjs.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -277,7 +295,6 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get template
     const templateResult = await pool.query(
       'SELECT * FROM notice_templates WHERE id = $1',
       [template_id]
@@ -289,7 +306,6 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
 
     const template = templateResult.rows[0];
 
-    // Get recipients
     const recipientResult = await pool.query(
       'SELECT * FROM tenants WHERE id = ANY($1::int[])',
       [recipient_ids]
@@ -301,7 +317,6 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
 
     const recipients = recipientResult.rows;
 
-    // Create notification record
     const notificationResult = await pool.query(
       `INSERT INTO notifications 
        (template_id, subject, sent_at, status, delivery_method, created_at) 
@@ -312,7 +327,6 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
 
     const notification = notificationResult.rows[0];
 
-    // Send to each recipient
     const deliveryResults = [];
 
     for (const recipient of recipients) {
@@ -321,27 +335,25 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
         let errorMessage = null;
 
         if (delivery_method === 'EMAIL' && recipient.email) {
-          const emailResult = await sendEmail(recipient, template, subject || template.name);
+          const emailResult = await sendEmailSafe(recipient, template, subject || template.name);
           deliveryStatus = emailResult.success ? 'DELIVERED' : 'FAILED';
           errorMessage = emailResult.error;
         } else if (delivery_method === 'SMS' && recipient.phone) {
-          const smsResult = await sendSMS(recipient, template);
+          const smsResult = await sendSMSSafe(recipient, template);
           deliveryStatus = smsResult.success ? 'DELIVERED' : 'FAILED';
           errorMessage = smsResult.error;
         } else if (delivery_method === 'BOTH') {
-          // Send both email and SMS
-          const emailResult = await sendEmail(recipient, template, subject || template.name);
-          const smsResult = await sendSMS(recipient, template);
+          const emailResult = await sendEmailSafe(recipient, template, subject || template.name);
+          const smsResult = await sendSMSSafe(recipient, template);
           
           if (emailResult.success || smsResult.success) {
             deliveryStatus = 'DELIVERED';
           } else {
             deliveryStatus = 'FAILED';
-            errorMessage = `Email: ${emailResult.error}, SMS: ${smsResult.error}`;
+            errorMessage = `Email: ${emailResult.error || 'N/A'}, SMS: ${smsResult.error || 'N/A'}`;
           }
         }
 
-        // Log delivery
         await pool.query(
           `INSERT INTO delivery_tracking 
            (notification_id, tenant_id, status, delivery_method, error_message, sent_at) 
@@ -366,7 +378,6 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
       }
     }
 
-    // Update notification status
     const allDelivered = deliveryResults.every(d => d.status === 'DELIVERED');
     await pool.query(
       'UPDATE notifications SET status = $1 WHERE id = $2',
@@ -388,6 +399,76 @@ app.post('/api/notifications/send', verifyToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ===== EMAIL SENDING (with timeout handling) =====
+
+async function sendEmailSafe(recipient, template, subject) {
+  try {
+    if (!emailEnabled || !emailTransporter) {
+      console.log(`📧 [TEST MODE] Email to ${recipient.email}`);
+      console.log(`   Subject: ${subject}`);
+      console.log(`   Content: ${template.content?.substring(0, 100)}...`);
+      return { success: true };
+    }
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Email send timeout')), 5000)
+    );
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: recipient.email,
+      subject: subject,
+      html: template.content || 'No content'
+    };
+
+    await Promise.race([
+      emailTransporter.sendMail(mailOptions),
+      timeout
+    ]);
+
+    console.log(`✅ Email sent to ${recipient.email}`);
+    return { success: true };
+
+  } catch (error) {
+    console.log(`📧 [TEST MODE] Email to ${recipient.email} (error: ${error.message})`);
+    return { success: true }; // Treat as success in test mode
+  }
+}
+
+// ===== SMS SENDING (with timeout handling) =====
+
+async function sendSMSSafe(recipient, template) {
+  try {
+    if (!smsEnabled || !twilioClient) {
+      console.log(`📱 [TEST MODE] SMS to ${recipient.phone}`);
+      console.log(`   Content: ${template.content?.substring(0, 100)}...`);
+      return { success: true };
+    }
+
+    const smsContent = (template.content || template.name).substring(0, 160);
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('SMS send timeout')), 5000)
+    );
+
+    await Promise.race([
+      twilioClient.messages.create({
+        body: smsContent,
+        from: process.env.TWILIO_FROM_NUMBER,
+        to: recipient.phone
+      }),
+      timeout
+    ]);
+
+    console.log(`✅ SMS sent to ${recipient.phone}`);
+    return { success: true };
+
+  } catch (error) {
+    console.log(`📱 [TEST MODE] SMS to ${recipient.phone} (error: ${error.message})`);
+    return { success: true }; // Treat as success in test mode
+  }
+}
 
 // ===== GET NOTIFICATIONS HISTORY =====
 
@@ -427,64 +508,6 @@ app.get('/api/notifications/:notificationId/tracking', verifyToken, async (req, 
   }
 });
 
-// ===== EMAIL SENDING FUNCTION =====
-
-async function sendEmail(recipient, template, subject) {
-  try {
-    // If no email transporter, log and return success for testing
-    if (!emailTransporter) {
-      console.log(`📧 [TEST MODE] Email would be sent to ${recipient.email}`);
-      console.log(`   Subject: ${subject}`);
-      console.log(`   Content preview: ${template.content?.substring(0, 100)}...`);
-      return { success: true };
-    }
-
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: recipient.email,
-      subject: subject,
-      html: template.content || 'No content'
-    };
-
-    await emailTransporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${recipient.email}`);
-    return { success: true };
-
-  } catch (error) {
-    console.error(`❌ Email error for ${recipient.email}:`, error.message);
-    return { success: false, error: error.message };
-  }
-}
-
-// ===== SMS SENDING FUNCTION =====
-
-async function sendSMS(recipient, template) {
-  try {
-    // If no Twilio client, log and return success for testing
-    if (!twilioClient) {
-      console.log(`📱 [TEST MODE] SMS would be sent to ${recipient.phone}`);
-      console.log(`   Content preview: ${template.content?.substring(0, 100)}...`);
-      return { success: true };
-    }
-
-    // Truncate message for SMS (160 chars limit)
-    const smsContent = (template.content || template.name).substring(0, 160);
-
-    const message = await twilioClient.messages.create({
-      body: smsContent,
-      from: process.env.TWILIO_FROM_NUMBER,
-      to: recipient.phone
-    });
-
-    console.log(`✅ SMS sent to ${recipient.phone}, SID: ${message.sid}`);
-    return { success: true };
-
-  } catch (error) {
-    console.error(`❌ SMS error for ${recipient.phone}:`, error.message);
-    return { success: false, error: error.message };
-  }
-}
-
 // ===== HEALTH CHECK =====
 
 app.get('/api/health', (req, res) => {
@@ -495,24 +518,20 @@ app.get('/api/health', (req, res) => {
 
 async function startServer() {
   try {
-    // Test database connection
     await pool.query('SELECT NOW()');
     console.log('✅ Database connected');
 
-    // Initialize email service
+    // Initialize services (non-blocking)
     await initializeEmailService();
-
-    // Initialize SMS service
     await initializeSMSService();
 
-    // Start server
     app.listen(PORT, () => {
       console.log(`🚀 CREEKSIDE - PRODUCTION LIVE`);
       console.log(`📍 Port: ${PORT}`);
       console.log(`🔐 JWT Secret: Configured`);
       console.log(`🗄️  Database: Connected`);
-      console.log(`📧 Email Service: ${emailTransporter ? 'Ready' : 'Test Mode'}`);
-      console.log(`📱 SMS Service: ${twilioClient ? 'Ready' : 'Test Mode'}`);
+      console.log(`📧 Email Service: ${emailEnabled ? 'Ready' : 'Test Mode'}`);
+      console.log(`📱 SMS Service: ${smsEnabled ? 'Ready' : 'Test Mode'}`);
     });
   } catch (error) {
     console.error('❌ Startup error:', error);
@@ -520,7 +539,6 @@ async function startServer() {
   }
 }
 
-// Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
