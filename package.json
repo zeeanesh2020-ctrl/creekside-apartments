@@ -1,24 +1,52 @@
 {
-  "name": "creekside-apartments-api",
-  "version": "1.0.0",
-  "description": "Creekside Apartments Property Management System API",
-  "main": "backend_production.js",
+  "name": "creekside-apartments",
+  "version": "2.0.0-production",
+  "description": "Production-grade property management system with SMS/Email notifications",
+  "main": "backend_PRODUCTION_HARDENED.js",
   "scripts": {
-    "start": "node backend_production.js",
-    "dev": "node backend_production.js"
+    "start": "node backend_PRODUCTION_HARDENED.js",
+    "dev": "NODE_ENV=development node backend_PRODUCTION_HARDENED.js",
+    "test": "NODE_ENV=test jest --forceExit --detectOpenHandles --runInBand",
+    "test:watch": "NODE_ENV=test jest --watch",
+    "test:coverage": "NODE_ENV=test jest --coverage",
+    "test:security": "npm run test -- --testNamePattern='Security'",
+    "test:unit": "npm run test -- --testNamePattern='Endpoints|Validation'",
+    "lint": "eslint . || true",
+    "lint:fix": "eslint . --fix || true"
   },
   "dependencies": {
-    "express": "4.17.1",
-    "pg": "8.8.0",
-    "jsonwebtoken": "8.5.1",
-    "bcryptjs": "2.4.3",
-    "nodemailer": "6.7.0",
-    "dotenv": "16.0.0"
+    "express": "^4.18.2",
+    "pg": "^8.8.0",
+    "jsonwebtoken": "^9.0.0",
+    "bcryptjs": "^2.4.3",
+    "nodemailer": "^6.9.1",
+    "twilio": "^3.75.1",
+    "dotenv": "^16.0.3",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^7.0.0",
+    "cors": "^2.8.5"
   },
-  "optionalDependencies": {
-    "twilio": "3.72.0"
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.40.0"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "./coverage",
+    "collectCoverageFrom": [
+      "backend_PRODUCTION_HARDENED.js"
+    ],
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "verbose": true,
+    "testTimeout": 30000,
+    "forceExit": true,
+    "detectOpenHandles": true
   }
 }
