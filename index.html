@@ -56,7 +56,7 @@
       font-weight: 500; 
       color: #333; 
     }
-    .form-group input { 
+    .form-group input, .form-group select { 
       width: 100%; 
       padding: 12px; 
       border: 1px solid #ddd; 
@@ -64,7 +64,7 @@
       font-size: 14px; 
       transition: 0.2s;
     }
-    .form-group input:focus { 
+    .form-group input:focus, .form-group select:focus { 
       outline: none; 
       border-color: #00a8e8; 
       box-shadow: 0 0 5px rgba(0,168,232,0.3); 
@@ -177,12 +177,14 @@
     .alert { padding: 15px; border-radius: 4px; margin-bottom: 20px; }
     .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
     
     .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .badge-success { background: #d4edda; color: #155724; }
     .badge-warning { background: #fff3cd; color: #856404; }
     .badge-danger { background: #f8d7da; color: #721c24; }
     .badge-info { background: #d1ecf1; color: #0c5460; }
+    .badge-pending { background: #ffeaa7; color: #856404; }
     
     .dashboard-stats {
       display: grid;
@@ -198,6 +200,16 @@
     }
     .stat-card h3 { font-size: 32px; margin-bottom: 5px; color: #1e3a5f; }
     .stat-card p { color: #666; font-size: 14px; }
+
+    .checkbox-list { max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; }
+    .checkbox-item { padding: 10px; border-bottom: 1px solid #eee; }
+    .checkbox-item input { margin-right: 10px; }
+    .checkbox-item label { cursor: pointer; display: flex; align-items: center; }
+
+    .delivery-results { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 20px; }
+    .result-item { padding: 10px; background: white; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #00a8e8; }
+    .result-item.success { border-left-color: #5cb85c; }
+    .result-item.failed { border-left-color: #d9534f; }
     
     @media (max-width: 768px) {
       .sidebar { width: 60px; }
@@ -355,6 +367,7 @@
               <tr>
                 <th>Name</th>
                 <th>Type</th>
+                <th>Content</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -363,15 +376,57 @@
           </table>
         </div>
 
-        <!-- Notifications Page -->
+        <!-- Send Notices Page -->
         <div id="notifications" class="page">
           <h2 class="page-title">📬 Send Notices</h2>
-          <button class="btn btn-success" onclick="showModal('sendNoticeModal')">📤 Send Notice</button>
-          <table class="table" style="margin-top: 20px;" id="notificationsTable">
+          
+          <div id="sendNoticeSection" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 20px;">Send Notice to Tenants</h3>
+            
+            <div class="form-group">
+              <label for="noticeTemplate">Select Notice Template</label>
+              <select id="noticeTemplate" onchange="onTemplateSelect()">
+                <option value="">-- Choose a template --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Select Recipients (Email or Phone Required)</label>
+              <div class="checkbox-list" id="recipientsList"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="deliveryMethod">Delivery Method</label>
+              <select id="deliveryMethod" required>
+                <option value="EMAIL">📧 Email Only</option>
+                <option value="SMS">📱 SMS Only</option>
+                <option value="BOTH">📧 Email + SMS</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="noticeSubject">Email Subject (Optional)</label>
+              <input type="text" id="noticeSubject" placeholder="Leave blank to use template name">
+            </div>
+
+            <button class="btn btn-success" onclick="sendNotice()" style="width: 100%; padding: 15px;">📤 Send Notice</button>
+          </div>
+
+          <!-- Results Section -->
+          <div id="sendResultsSection" style="display: none;">
+            <h3>📊 Send Results</h3>
+            <div id="sendResults" class="delivery-results"></div>
+            <button class="btn btn-secondary" onclick="resetSendForm()">Send Another Notice</button>
+          </div>
+
+          <!-- History -->
+          <h3 style="margin-top: 40px; margin-bottom: 20px;">📬 Recent Notices Sent</h3>
+          <table class="table" id="notificationsTable">
             <thead>
               <tr>
                 <th>Template</th>
                 <th>Recipients</th>
+                <th>Method</th>
                 <th>Status</th>
                 <th>Sent</th>
                 <th>Actions</th>
@@ -390,8 +445,10 @@
                 <th>Tenant</th>
                 <th>Unit</th>
                 <th>Notice Type</th>
-                <th>Sent Date</th>
+                <th>Delivery Method</th>
                 <th>Status</th>
+                <th>Sent Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="historyList"></tbody>
@@ -454,6 +511,37 @@
     </div>
   </div>
 
+  <div id="createTemplateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create Notice Template</h2>
+        <button class="close-btn" onclick="closeModal('createTemplateModal')">✕</button>
+      </div>
+      <form id="createTemplateForm" onsubmit="createTemplate(event)">
+        <div class="form-group">
+          <label>Template Name</label>
+          <input type="text" id="templateNameInput" placeholder="e.g., Rent Late Notice" required>
+        </div>
+        <div class="form-group">
+          <label>Notice Type</label>
+          <select id="templateTypeInput" required>
+            <option>MAINTENANCE</option>
+            <option>RENT_REMINDER</option>
+            <option>LEASE_TERMINATION</option>
+            <option>RULE_VIOLATION</option>
+            <option>ANNOUNCEMENT</option>
+            <option>OTHER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Content (HTML supported)</label>
+          <textarea id="templateContentInput" rows="6" placeholder="Enter notice content..." required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Template</button>
+      </form>
+    </div>
+  </div>
+
   <script>
     // ===== CONFIGURATION =====
     const API_URL = 'https://creekside-prod-backend.onrender.com/api';
@@ -462,6 +550,7 @@
     let allTenants = [];
     let allUnits = [];
     let allTemplates = [];
+    let selectedRecipients = [];
 
     // ===== AUTH FUNCTIONS =====
     function toggleAuthForm() {
@@ -471,7 +560,6 @@
       loginForm.classList.toggle('form-hidden');
       signupForm.classList.toggle('form-hidden');
       
-      // Clear errors
       document.getElementById('loginError').style.display = 'none';
       document.getElementById('signupError').style.display = 'none';
       document.getElementById('signupSuccess').style.display = 'none';
@@ -506,13 +594,11 @@
           throw new Error(data.error || 'Login failed');
         }
         
-        // Save token and user
         currentToken = data.token;
         currentUser = data.user;
         localStorage.setItem('token', currentToken);
         localStorage.setItem('user', JSON.stringify(currentUser));
         
-        // Show app
         showApp();
         loadDashboard();
         
@@ -570,17 +656,14 @@
           throw new Error(data.error || 'Registration failed');
         }
         
-        // Account created successfully
         successDiv.textContent = '✅ Account created! Signing you in...';
         successDiv.style.display = 'block';
         
-        // Auto-login
         currentToken = data.token;
         currentUser = data.user;
         localStorage.setItem('token', currentToken);
         localStorage.setItem('user', JSON.stringify(currentUser));
         
-        // Show app after 1 second
         setTimeout(() => {
           showApp();
           loadDashboard();
@@ -599,7 +682,6 @@
       document.getElementById('authContainer').classList.remove('show');
       document.getElementById('appContainer').style.display = 'flex';
       
-      // Update user name
       if (currentUser) {
         document.getElementById('userName').textContent = currentUser.name;
       }
@@ -609,7 +691,6 @@
       document.getElementById('authContainer').classList.add('show');
       document.getElementById('appContainer').style.display = 'none';
       
-      // Reset forms
       document.getElementById('loginForm').classList.remove('form-hidden');
       document.getElementById('signupForm').classList.add('form-hidden');
       document.getElementById('loginForm').reset();
@@ -626,17 +707,12 @@
 
     // ===== APP FUNCTIONS =====
     function showPage(page) {
-      // Hide all pages
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      
-      // Remove active from nav buttons
       document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
       
-      // Show selected page
       document.getElementById(page).classList.add('active');
       document.querySelector(`[data-page="${page}"]`).classList.add('active');
       
-      // Update title
       const titleMap = {
         dashboard: '📊 Dashboard',
         tenants: '👥 Tenants',
@@ -647,12 +723,11 @@
       };
       document.getElementById('pageTitle').textContent = titleMap[page];
       
-      // Load data
       if (page === 'dashboard') loadDashboard();
       if (page === 'tenants') loadTenants();
       if (page === 'units') loadUnits();
       if (page === 'templates') loadTemplates();
-      if (page === 'notifications') loadNotifications();
+      if (page === 'notifications') loadNotificationsPage();
       if (page === 'history') loadHistory();
     }
 
@@ -850,7 +925,8 @@
         <tr>
           <td>${t.name}</td>
           <td>${t.notice_type}</td>
-          <td><span class="badge badge-warning">${t.compliance_status || 'PENDING'}</span></td>
+          <td>${t.content?.substring(0, 50)}...</td>
+          <td><span class="badge badge-success">${t.compliance_status || 'APPROVED'}</span></td>
           <td>
             <button class="btn btn-small" onclick="editTemplate(${t.id})">Edit</button>
             <button class="btn btn-small btn-danger" onclick="deleteTemplate(${t.id})">Delete</button>
@@ -859,12 +935,230 @@
       `).join('');
     }
 
+    async function createTemplate(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('templateNameInput').value;
+      const notice_type = document.getElementById('templateTypeInput').value;
+      const content = document.getElementById('templateContentInput').value;
+      
+      try {
+        const response = await fetch(`${API_URL}/notice-templates`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify({ name, notice_type, content })
+        });
+        
+        if (response.ok) {
+          closeModal('createTemplateModal');
+          loadTemplates();
+          document.getElementById('createTemplateForm').reset();
+          alert('✅ Template created successfully!');
+        }
+      } catch (error) {
+        alert('Error creating template: ' + error.message);
+      }
+    }
+
+    // ===== SEND NOTICES FUNCTIONS =====
+
+    async function loadNotificationsPage() {
+      await loadTemplates();
+      await loadTenants();
+      await loadNotifications();
+      populateTemplateSelect();
+      displayRecipientsList();
+    }
+
+    function populateTemplateSelect() {
+      const select = document.getElementById('noticeTemplate');
+      select.innerHTML = '<option value="">-- Choose a template --</option>';
+      allTemplates.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.id;
+        option.textContent = `${t.name} (${t.notice_type})`;
+        select.appendChild(option);
+      });
+    }
+
+    function displayRecipientsList() {
+      const container = document.getElementById('recipientsList');
+      container.innerHTML = allTenants.map(t => `
+        <div class="checkbox-item">
+          <label>
+            <input type="checkbox" value="${t.id}" onchange="onRecipientChange()" ${t.email || t.phone ? '' : 'disabled'}>
+            ${t.name} (${t.unit}) ${t.email ? '📧 ' + t.email : ''} ${t.phone ? '📱 ' + t.phone : ''}
+            ${!t.email && !t.phone ? '<span style="color: #999;">(No email/phone)</span>' : ''}
+          </label>
+        </div>
+      `).join('');
+    }
+
+    function onRecipientChange() {
+      const checkboxes = document.querySelectorAll('#recipientsList input[type="checkbox"]:checked');
+      selectedRecipients = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    }
+
+    function onTemplateSelect() {
+      const templateId = document.getElementById('noticeTemplate').value;
+      if (templateId) {
+        const template = allTemplates.find(t => t.id == templateId);
+        if (template) {
+          document.getElementById('noticeSubject').value = template.name;
+        }
+      }
+    }
+
+    async function sendNotice() {
+      const template_id = document.getElementById('noticeTemplate').value;
+      const delivery_method = document.getElementById('deliveryMethod').value;
+      const subject = document.getElementById('noticeSubject').value;
+
+      if (!template_id) {
+        alert('❌ Please select a template');
+        return;
+      }
+
+      if (selectedRecipients.length === 0) {
+        alert('❌ Please select at least one recipient');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = '⏳ Sending...';
+
+      try {
+        const response = await fetch(`${API_URL}/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify({
+            template_id: parseInt(template_id),
+            recipient_ids: selectedRecipients,
+            delivery_method: delivery_method,
+            subject: subject || undefined
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          displaySendResults(data);
+          loadNotifications();
+        } else {
+          alert('❌ Error: ' + data.error);
+        }
+      } catch (error) {
+        alert('❌ Error sending notice: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📤 Send Notice';
+      }
+    }
+
+    function displaySendResults(data) {
+      const resultsHtml = `
+        <div style="margin-bottom: 20px;">
+          <h4>📊 Summary</h4>
+          <p>Total Recipients: <strong>${data.summary.total}</strong></p>
+          <p>✅ Delivered: <strong style="color: #5cb85c;">${data.summary.delivered}</strong></p>
+          <p>❌ Failed: <strong style="color: #d9534f;">${data.summary.failed}</strong></p>
+        </div>
+
+        <h4>Details</h4>
+        ${data.results.map(r => `
+          <div class="result-item ${r.status === 'DELIVERED' ? 'success' : 'failed'}">
+            <strong>${r.tenant_name}</strong>
+            <br/>
+            Status: <span class="badge ${r.status === 'DELIVERED' ? 'badge-success' : 'badge-danger'}">${r.status}</span>
+            ${r.error ? '<br/>Error: ' + r.error : ''}
+          </div>
+        `).join('')}
+      `;
+
+      document.getElementById('sendResults').innerHTML = resultsHtml;
+      document.getElementById('sendNoticeSection').style.display = 'none';
+      document.getElementById('sendResultsSection').style.display = 'block';
+    }
+
+    function resetSendForm() {
+      document.getElementById('sendNoticeSection').style.display = 'block';
+      document.getElementById('sendResultsSection').style.display = 'none';
+      document.getElementById('noticeTemplate').value = '';
+      document.getElementById('noticeSubject').value = '';
+      document.getElementById('deliveryMethod').value = 'EMAIL';
+      document.querySelectorAll('#recipientsList input[type="checkbox"]').forEach(cb => cb.checked = false);
+      selectedRecipients = [];
+    }
+
     async function loadNotifications() {
-      document.getElementById('notificationsList').innerHTML = '<tr><td colspan="5">No notifications sent yet</td></tr>';
+      try {
+        const response = await fetch(`${API_URL}/notifications/history`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const notifications = await response.json();
+        
+        document.getElementById('notificationsList').innerHTML = (notifications || []).map(n => `
+          <tr>
+            <td>${n.template_name || 'Unknown'}</td>
+            <td>${n.total_recipients || 0}</td>
+            <td><span class="badge badge-info">${n.delivery_method || 'EMAIL'}</span></td>
+            <td><span class="badge ${n.status === 'SENT' ? 'badge-success' : 'badge-warning'}">${n.status || 'PENDING'}</span></td>
+            <td>${new Date(n.sent_at).toLocaleDateString()}</td>
+            <td>
+              <button class="btn btn-small" onclick="viewDeliveryTracking(${n.id})">View Details</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load notifications error:', error);
+      }
+    }
+
+    async function viewDeliveryTracking(notificationId) {
+      try {
+        const response = await fetch(`${API_URL}/notifications/${notificationId}/tracking`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const tracking = await response.json();
+        
+        alert('📋 Delivery Tracking:\n\n' + tracking.map(t => 
+          `${t.name}: ${t.status} (${t.delivery_method})`
+        ).join('\n'));
+      } catch (error) {
+        alert('Error loading tracking: ' + error.message);
+      }
     }
 
     async function loadHistory() {
-      document.getElementById('historyList').innerHTML = '<tr><td colspan="5">No history yet</td></tr>';
+      try {
+        const response = await fetch(`${API_URL}/notifications/history`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const notifications = await response.json();
+        
+        document.getElementById('historyList').innerHTML = (notifications || []).slice(0, 50).map(n => `
+          <tr>
+            <td>-</td>
+            <td>-</td>
+            <td>${n.template_name || 'Unknown'}</td>
+            <td><span class="badge badge-info">${n.delivery_method || 'EMAIL'}</span></td>
+            <td><span class="badge ${n.status === 'SENT' ? 'badge-success' : 'badge-warning'}">${n.status || 'PENDING'}</span></td>
+            <td>${new Date(n.sent_at).toLocaleDateString()}</td>
+            <td>
+              <button class="btn btn-small" onclick="viewDeliveryTracking(${n.id})">Details</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load history error:', error);
+      }
     }
 
     // ===== MODAL FUNCTIONS =====
