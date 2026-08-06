@@ -1,0 +1,76 @@
+# ==============================================================================
+# Creekside Apartments - Git Ignore Configuration
+# ==============================================================================
+# This file prevents accidentally committing secrets and build artifacts
+
+# ===== ENVIRONMENT VARIABLES =====
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+
+# ===== NODE.JS =====
+node_modules/
+npm-debug.log*
+npm-debug.log*.json
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.code-workspace
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.temp
+.cache/
+dist/
+build/
+
+# ===== DATABASE =====
+*.db
+*.sqlite
+*.sqlite3
+database.backup
+
+# ===== LOGS =====
+logs/
+*.log
+
+# ===== OS SPECIFIC =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===== TESTING =====
+coverage/
+.nyc_output/
+
+# ===== SECURITY =====
+# Never commit these files:
+/secrets/
+/keys/
+*.pem
+*.key
+
+# ===== EDITOR BACKUPS =====
+*~
+*.bak
+*.swp
+.#*
+
+# ===== RENDER SPECIFIC =====
+.render/
