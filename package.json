@@ -7,7 +7,7 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-       "start": "node server.js"
+       "start": "node server.js",
     "start": "node backend_production.js",
     "dev": "nodemon backend_production.js",
     "test": "jest"
